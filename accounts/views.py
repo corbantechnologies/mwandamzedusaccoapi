@@ -13,10 +13,15 @@ from accounts.serializers import (
     UserLoginSerializer,
     BaseUserSerializer,
     MemberCreatedByAdminSerializer,
-    PasswordChangeSerializer
+    PasswordChangeSerializer,
 )
 from accounts.utils import send_account_activated_email
 from accounts.permissions import IsSystemAdminOrReadOnly
+from mwandamzeduapi.settings import DOMAIN
+from savingtypes.models import SavingType
+from venturetypes.models import VentureType
+from savings.models import SavingsAccount
+from ventureaccounts.models import VentureAccount
 
 User = get_user_model()
 
@@ -119,12 +124,12 @@ class MemberListView(generics.ListAPIView):
 
     def get_queryset(self):
         """
-        Fetch is_member and is_system_admin field
-        Users with is_system_admin are also members
+        Fetch is_member and is_sacco_admin field
+        Users with is_sacco_admin are also members
         """
         return super().get_queryset().filter(
             is_member=True
-        ) | super().get_queryset().filter(is_system_admin=True)
+        ) | super().get_queryset().filter(is_sacco_admin=True)
 
 
 class MemberDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -138,42 +143,42 @@ class MemberDetailView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = "member_no"
 
 
-# class MemberCreatedByAdminView(generics.CreateAPIView):
-#     permission_classes = (IsSystemAdmin,)
-#     serializer_class = MemberCreatedByAdminSerializer
-#     queryset = User.objects.all()
+class MemberCreatedByAdminView(generics.CreateAPIView):
+    permission_classes = (IsSystemAdminOrReadOnly,)
+    serializer_class = MemberCreatedByAdminSerializer
+    queryset = User.objects.all()
 
-#     def perform_create(self, serializer):
-#         user = serializer.save()
+    def perform_create(self, serializer):
+        user = serializer.save()
 
-#         # Existing savings account creation
-#         savings_types = SavingsType.objects.all()
-#         created_accounts = []
-#         for savings_type in savings_types:
-#             if not SavingsAccount.objects.filter(
-#                 member=user, account_type=savings_type
-#             ).exists():
-#                 account = SavingsAccount.objects.create(
-#                     member=user, account_type=savings_type, is_active=True
-#                 )
-#                 created_accounts.append(str(account))
-#         logger.info(
-#             f"Created {len(created_accounts)} SavingsAccounts for {user.member_no}: {', '.join(created_accounts)}"
-#         )
-#         # Existing venture account creation
-#         venture_types = VentureType.objects.all()
-#         created_accounts = []
-#         for venture_type in venture_types:
-#             if not VentureAccount.objects.filter(
-#                 member=user, venture_type=venture_type
-#             ).exists():
-#                 account = VentureAccount.objects.create(
-#                     member=user, venture_type=venture_type, is_active=True
-#                 )
-#                 created_accounts.append(str(account))
-#         logger.info(
-#             f"Created {len(created_accounts)} VentureAccounts for {user.member_no}: {', '.join(created_accounts)}"
-#         )
+        # Existing savings account creation
+        savings_types = SavingType.objects.all()
+        created_accounts = []
+        for savings_type in savings_types:
+            if not SavingsAccount.objects.filter(
+                member=user, account_type=savings_type
+            ).exists():
+                account = SavingsAccount.objects.create(
+                    member=user, account_type=savings_type, is_active=True
+                )
+                created_accounts.append(str(account))
+        logger.info(
+            f"Created {len(created_accounts)} SavingsAccounts for {user.member_no}: {', '.join(created_accounts)}"
+        )
+        # Existing venture account creation
+        venture_types = VentureType.objects.all()
+        created_accounts = []
+        for venture_type in venture_types:
+            if not VentureAccount.objects.filter(
+                member=user, venture_type=venture_type
+            ).exists():
+                account = VentureAccount.objects.create(
+                    member=user, venture_type=venture_type, is_active=True
+                )
+                created_accounts.append(str(account))
+        logger.info(
+            f"Created {len(created_accounts)} VentureAccounts for {user.member_no}: {', '.join(created_accounts)}"
+        )
 
 
 class ActivateAccountView(APIView):
