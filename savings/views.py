@@ -19,7 +19,7 @@ class SavingListCreateView(generics.ListCreateAPIView):
         return self.queryset.filter(member=self.request.user)
 
 
-class SavingDetailView(generics.RetrieveUpdateDestroyAPIView):
+class SavingDetailView(generics.RetrieveUpdateAPIView):
     queryset = Saving.objects.all()
     serializer_class = SavingSerializer
     permission_classes = [

@@ -11,7 +11,7 @@ class SavingTypeListCreateView(generics.ListCreateAPIView):
     permission_classes = (IsSystemAdminOrReadOnly,)
 
 
-class SavingTypeDetailView(generics.RetrieveUpdateDestroyAPIView):
+class SavingTypeDetailView(generics.RetrieveUpdateAPIView):
     queryset = SavingType.objects.all()
     serializer_class = SavingTypeSerializer
     permission_classes = (IsSystemAdminOrReadOnly,)
