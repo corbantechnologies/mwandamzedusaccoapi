@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "savingsdeposits",
     "venturetypes",
     "ventureaccounts",
+    "venturedeposits",
     "transactions",
 ]
 
