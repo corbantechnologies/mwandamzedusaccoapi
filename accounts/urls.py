@@ -7,7 +7,7 @@ from accounts.views import (
     MemberDetailView,
     ActivateAccountView,
     PasswordChangeView,
-    MemberCreatedByAdminSerializer,
+    MemberCreatedByAdminView,
 )
 
 app_name = "accounts"
@@ -20,7 +20,7 @@ urlpatterns = [
     path("member/<str:member_no>/", MemberDetailView.as_view(), name="member-detail"),
     path(
         "new-member/create/",
-        MemberCreatedByAdminSerializer.as_view(),
+        MemberCreatedByAdminView.as_view(),
         name="member-created-by-admin",
     ),
     # Password Reset

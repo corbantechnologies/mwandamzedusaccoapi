@@ -124,12 +124,12 @@ class MemberListView(generics.ListAPIView):
 
     def get_queryset(self):
         """
-        Fetch is_member and is_system_admin field
-        Users with is_system_admin are also members
+        Fetch is_member and is_sacco_admin field
+        Users with is_sacco_admin are also members
         """
         return super().get_queryset().filter(
             is_member=True
-        ) | super().get_queryset().filter(is_system_admin=True)
+        ) | super().get_queryset().filter(is_sacco_admin=True)
 
 
 class MemberDetailView(generics.RetrieveUpdateDestroyAPIView):
