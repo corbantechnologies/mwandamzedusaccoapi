@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     "cloudinary",
     # Local apps
     "accounts",
+    "savingtypes",
+    "savings",
 ]
 
 MIDDLEWARE = [
