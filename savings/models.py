@@ -9,10 +9,9 @@ from savings.utils import generate_account_number
 
 User = get_user_model()
 
-class Saving(UniversalIdModel, TimeStampedModel, ReferenceModel):
-    member = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="savings"
-    )
+
+class SavingsAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
+    member = models.ForeignKey(User, on_delete=models.CASCADE, related_name="savings")
     account_type = models.ForeignKey(
         SavingType, on_delete=models.PROTECT, related_name="accounts"
     )
@@ -24,13 +23,13 @@ class Saving(UniversalIdModel, TimeStampedModel, ReferenceModel):
     identity = models.CharField(max_length=100, blank=True, null=True, unique=True)
 
     class Meta:
-        verbose_name = "Saving"
-        verbose_name_plural = "Savings"
+        verbose_name = "SavingsAccount"
+        verbose_name_plural = "Savings Accounts"
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.account_number} - {self.member.member_no}"
-    
+
     def save(self, *args, **kwargs):
         if not self.identity:
             self.identity = slugify(f"{self.member.member_no}-{self.account_number}")

@@ -12,29 +12,72 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('savingtypes', '0001_initial'),
+        ("savingtypes", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Saving',
+            name="SavingsAccount",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('account_number', models.CharField(default=savings.utils.generate_account_number, max_length=20, unique=True)),
-                ('balance', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('is_active', models.BooleanField(default=True)),
-                ('identity', models.CharField(blank=True, max_length=100, null=True, unique=True)),
-                ('account_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='accounts', to='savingtypes.savingtype')),
-                ('member', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='savings', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                (
+                    "account_number",
+                    models.CharField(
+                        default=savings.utils.generate_account_number,
+                        max_length=20,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "balance",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "identity",
+                    models.CharField(
+                        blank=True, max_length=100, null=True, unique=True
+                    ),
+                ),
+                (
+                    "account_type",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="accounts",
+                        to="savingtypes.savingtype",
+                    ),
+                ),
+                (
+                    "member",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="savings",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Saving',
-                'verbose_name_plural': 'Savings',
-                'ordering': ['-created_at'],
+                "verbose_name": "SavingsAccount",
+                "verbose_name_plural": "Savings",
+                "ordering": ["-created_at"],
             },
         ),
     ]

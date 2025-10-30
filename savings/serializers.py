@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from savingtypes.models import SavingType
-from savings.models import Saving
+from savings.models import SavingsAccount
 
 
 class SavingSerializer(serializers.ModelSerializer):
@@ -10,11 +10,10 @@ class SavingSerializer(serializers.ModelSerializer):
         queryset=SavingType.objects.all(), slug_field="name"
     )
 
-
     class Meta:
-        model = Saving
+        model = SavingsAccount
         fields = (
-           "member",
+            "member",
             "account_type",
             "account_number",
             "balance",

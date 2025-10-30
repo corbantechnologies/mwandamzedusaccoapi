@@ -1,12 +1,12 @@
 from rest_framework import generics
 
-from savings.models import Saving
+from savings.models import SavingsAccount
 from savings.serializers import SavingSerializer
 from accounts.permissions import IsSystemAdminOrReadOnly
 
 
 class SavingListCreateView(generics.ListCreateAPIView):
-    queryset = Saving.objects.all()
+    queryset = SavingsAccount.objects.all()
     serializer_class = SavingSerializer
     permission_classes = [
         IsSystemAdminOrReadOnly,
@@ -20,7 +20,7 @@ class SavingListCreateView(generics.ListCreateAPIView):
 
 
 class SavingDetailView(generics.RetrieveUpdateAPIView):
-    queryset = Saving.objects.all()
+    queryset = SavingsAccount.objects.all()
     serializer_class = SavingSerializer
     permission_classes = [
         IsSystemAdminOrReadOnly,

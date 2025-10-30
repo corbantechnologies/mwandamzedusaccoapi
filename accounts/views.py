@@ -13,14 +13,14 @@ from accounts.serializers import (
     UserLoginSerializer,
     BaseUserSerializer,
     MemberCreatedByAdminSerializer,
-    PasswordChangeSerializer
+    PasswordChangeSerializer,
 )
 from accounts.utils import send_account_activated_email
 from accounts.permissions import IsSystemAdminOrReadOnly
 from mwandamzeduapi.settings import DOMAIN
 from savingtypes.models import SavingType
 from venturetypes.models import VentureType
-from savings.models import Saving
+from savings.models import SavingsAccount
 from ventureaccounts.models import VentureAccount
 
 User = get_user_model()
@@ -155,10 +155,10 @@ class MemberCreatedByAdminView(generics.CreateAPIView):
         savings_types = SavingType.objects.all()
         created_accounts = []
         for savings_type in savings_types:
-            if not Saving.objects.filter(
+            if not SavingsAccount.objects.filter(
                 member=user, account_type=savings_type
             ).exists():
-                account = Saving.objects.create(
+                account = SavingsAccount.objects.create(
                     member=user, account_type=savings_type, is_active=True
                 )
                 created_accounts.append(str(account))

@@ -6,7 +6,7 @@ from rest_framework import generics
 from savingtypes.models import SavingType
 from savingtypes.serializers import SavingTypeSerializer
 from accounts.permissions import IsSystemAdminOrReadOnly
-from savings.models import Saving
+from savings.models import SavingsAccount
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +24,15 @@ class SavingTypeListCreateView(generics.ListCreateAPIView):
         created_accounts = []
 
         for member in members:
-            if not Saving.objects.filter(
+            if not SavingsAccount.objects.filter(
                 member=member, account_type=saving_types
             ).exists():
-                account = Saving.objects.create(
+                account = SavingsAccount.objects.create(
                     member=member, account_type=saving_types, is_active=True
                 )
                 created_accounts.append(str(account))
         logger.info(
-            f"Created {len(created_accounts)} Saving Accounts {', '.join(created_accounts)}"
+            f"Created {len(created_accounts)} SavingsAccount Accounts {', '.join(created_accounts)}"
         )
 
 

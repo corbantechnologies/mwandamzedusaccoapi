@@ -6,5 +6,5 @@ app_name = "savings"
 
 urlpatterns = [
     path("", SavingListCreateView.as_view(), name="savings"),
-    path("<str:reference>/", SavingDetailView.as_view(), name="saving-detail"),
+    path("<str:reference>/", SavingDetailView.as_view(), name="SavingsAccount-detail"),
 ]
