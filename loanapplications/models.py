@@ -1,8 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from loanproducts.models import LoanProduct
+from datetime import date
 
 User = get_user_model()
 
@@ -33,20 +33,17 @@ class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
         LoanProduct, on_delete=models.PROTECT, related_name="applications"
     )
     requested_amount = models.DecimalField(max_digits=15, decimal_places=2)
-    term_months = models.PositiveIntegerField(null=True, blank=True)
+    term_months = models.PositiveIntegerField()
     repayment_frequency = models.CharField(
-        max_length=40,
-        choices=REPAYMENT_FREQUENCY_CHOICES,
-        default="monthly",
-        help_text="How often borrower makes payments",
+        max_length=40, choices=REPAYMENT_FREQUENCY_CHOICES, default="monthly"
+    )
+    start_date = models.DateField(
+        default=date.today, help_text="Loan disbursement date (used for projection)"
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     projection_snapshot = models.JSONField(
-        null=True,
-        blank=True,
-        help_text="Exact projection shown to borrower at application time",
+        null=True, blank=True, help_text="Full repayment projection"
     )
-    # Add fields for guarantors or rather guarantor functionality
 
     class Meta:
         verbose_name = "Loan Application"

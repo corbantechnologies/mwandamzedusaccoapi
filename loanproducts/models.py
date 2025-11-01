@@ -9,7 +9,7 @@ User = get_user_model()
 
 class LoanProduct(UniversalIdModel, TimeStampedModel, ReferenceModel):
     """
-    Used to create different loan products.
+    - Used to create different loan products.
     - Interest is on default flat rate
     """
 
@@ -40,7 +40,7 @@ class LoanProduct(UniversalIdModel, TimeStampedModel, ReferenceModel):
     calculation_schedule = models.CharField(
         max_length=20,
         choices=CALCULATION_SCHEDULE_CHOICES,
-        default="relative",
+        default="Relative",
         help_text="Defines when interest is calculated (fixed calendar, loan start date, or custom).",
     )
     is_active = models.BooleanField(default=True)
@@ -51,4 +51,4 @@ class LoanProduct(UniversalIdModel, TimeStampedModel, ReferenceModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.name} - ({self.interest_type}, {self.interest_period})"
+        return f"{self.name} - {self.interest_rate}% - {self.interest_period} - {self.calculation_schedule}"

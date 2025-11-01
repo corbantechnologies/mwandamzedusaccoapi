@@ -89,7 +89,14 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
     lookup_field = "id"
 
     def get_queryset(self):
-        return super().get_queryset().filter(id=self.request.user.id)
+        return (
+            super()
+            .get_queryset()
+            .filter(id=self.request.user.id)
+            .prefetch_related(
+                "venture_accounts", "savings", "loan_applications", "loan_accounts"
+            )
+        )
 
 
 class PasswordChangeView(generics.UpdateAPIView):
@@ -127,9 +134,11 @@ class MemberListView(generics.ListAPIView):
         Fetch is_member and is_sacco_admin field
         Users with is_sacco_admin are also members
         """
-        return super().get_queryset().filter(
-            is_member=True
-        ) | super().get_queryset().filter(is_sacco_admin=True)
+        return super().get_queryset().filter(is_member=True).prefetch_related(
+            "venture_accounts", "savings", "loan_applications", "loan_accounts"
+        ) | super().get_queryset().filter(is_sacco_admin=True).prefetch_related(
+            "venture_accounts", "savings", "loan_applications", "loan_accounts"
+        )
 
 
 class MemberDetailView(generics.RetrieveUpdateDestroyAPIView):

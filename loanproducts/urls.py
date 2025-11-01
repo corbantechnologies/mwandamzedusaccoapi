@@ -1,11 +1,11 @@
 from django.urls import path
 
-from loanproducts.views import LoanProductDetailView, LoanProductListView
+from loanproducts.views import LoanProductDetailView, LoanProductListCreateView
 
 app_name = "loanproducts"
 
 urlpatterns = [
-    path("", LoanProductListView.as_view(), name="loanproducts"),
+    path("", LoanProductListCreateView.as_view(), name="loanproducts"),
     path(
         "<str:reference>/", LoanProductDetailView.as_view(), name="loanproduct-detail"
     ),

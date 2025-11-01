@@ -5,7 +5,7 @@ from loanproducts.serializers import LoanProductSerializer
 from accounts.permissions import IsSystemAdminOrReadOnly
 
 
-class LoanProductListView(generics.ListCreateAPIView):
+class LoanProductListCreateView(generics.ListCreateAPIView):
     queryset = LoanProduct.objects.all()
     serializer_class = LoanProductSerializer
     permission_classes = [

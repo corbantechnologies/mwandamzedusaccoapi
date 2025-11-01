@@ -9,6 +9,11 @@ User = get_user_model()
 
 
 class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
+    """
+    - Created automatically after a loan application has been approved;
+    - Unless it is created for the member by the admin.
+    """
+
     STATUS_CHOICES = [
         ("Active", "Active"),
         ("Closed", "Closed"),

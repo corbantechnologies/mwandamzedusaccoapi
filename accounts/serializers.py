@@ -14,6 +14,8 @@ from accounts.utils import send_account_created_by_admin_email
 from mwandamzeduapi.settings import DOMAIN
 from savings.serializers import SavingSerializer
 from ventureaccounts.serializers import VentureAccountSerializer
+from loanaccounts.serializers import LoanAccountSerializer
+from loanapplications.serializers import LoanApplicationSerializer
 
 
 User = get_user_model()
@@ -34,6 +36,8 @@ class BaseUserSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(use_url=True, required=False)
     savings = SavingSerializer(many=True, read_only=True)
     venture_accounts = VentureAccountSerializer(many=True, read_only=True)
+    loan_accounts = LoanAccountSerializer(many=True, read_only=True)
+    loan_applications = LoanApplicationSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -61,6 +65,8 @@ class BaseUserSerializer(serializers.ModelSerializer):
             "is_active",
             "savings",
             "venture_accounts",
+            "loan_accounts",
+            "loan_applications",
         )
 
     def create_user(self, validated_data, role_field):
