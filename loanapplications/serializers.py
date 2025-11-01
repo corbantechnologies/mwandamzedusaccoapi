@@ -1,3 +1,4 @@
+# loanapplications/serializers.py
 from rest_framework import serializers
 from loanapplications.models import LoanApplication
 from loanproducts.models import LoanProduct
@@ -36,19 +37,35 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         read_only_fields = ("status", "projection", "created_at", "reference")
 
     def get_projection(self, obj):
-        if obj.projection_snapshot:
-            return obj.projection_snapshot
-        return None
+        return obj.projection_snapshot
 
-    def create(self, validated_data):
-        product = validated_data["product"]
-        principal = Decimal(validated_data["requested_amount"])
-        term_months = validated_data["term_months"]
-        frequency = validated_data["repayment_frequency"].lower()
-        start_date = validated_data["start_date"]
+    def _should_recalculate_projection(self, validated_data, instance):
+        fields_to_check = [
+            "requested_amount",
+            "term_months",
+            "repayment_frequency",
+            "start_date",
+            "product",
+        ]
+        return any(
+            validated_data.get(field) != getattr(instance, field)
+            for field in fields_to_check
+            if field in validated_data
+        )
 
-        # Generate projection
-        projection = flat_rate_projection(
+    def _generate_projection(self, validated_data, instance):
+        # Use updated product if provided, else fall back to instance
+        product = validated_data.get("product", instance.product)
+        principal = Decimal(
+            validated_data.get("requested_amount", instance.requested_amount)
+        )
+        term_months = validated_data.get("term_months", instance.term_months)
+        frequency = validated_data.get(
+            "repayment_frequency", instance.repayment_frequency
+        ).lower()
+        start_date = validated_data.get("start_date", instance.start_date)
+
+        return flat_rate_projection(
             principal=principal,
             annual_rate=product.interest_rate,
             term_months=term_months,
@@ -56,10 +73,24 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             repayment_frequency=frequency,
         )
 
-        # Save snapshot
+    def create(self, validated_data):
+        projection = self._generate_projection(validated_data, None)
         instance = LoanApplication.objects.create(
-            **validated_data,
-            projection_snapshot=projection,
-            status="In Progress"  # Auto-move to In Progress
+            **validated_data, projection_snapshot=projection, status="In Progress"
         )
+        return instance
+
+    def update(self, instance, validated_data):
+        # Only recalculate if a relevant field changed
+        if self._should_recalculate_projection(validated_data, instance):
+            projection = self._generate_projection(validated_data, instance)
+            validated_data["projection_snapshot"] = projection
+            # Auto-set status to In Progress on recalculation
+            if "status" not in validated_data:
+                validated_data["status"] = "In Progress"
+
+        # Apply updates
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
         return instance

@@ -21,3 +21,6 @@ class LoanApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = LoanApplicationSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = "reference"
+
+    def patch(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
