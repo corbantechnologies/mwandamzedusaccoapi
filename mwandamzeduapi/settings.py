@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "venturepayments",
     "transactions",
     "loanproducts",
+    "loanaccounts",
 ]
 
 MIDDLEWARE = [
