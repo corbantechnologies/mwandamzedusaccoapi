@@ -16,4 +16,14 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = LoanApplication
-        fields = "__all__"
+        fields = (
+            "member",
+            "product",
+            "requested_amount",
+            "term_months",
+            "repayment_frequency",
+            "status",
+            "created_at",
+            "updated_at",
+            "reference",
+        )
