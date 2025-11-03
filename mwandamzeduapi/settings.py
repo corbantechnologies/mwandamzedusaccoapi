@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     "loanproducts",
     "loanaccounts",
     "loanapplications",
+    "guarantors",
+    "guaranteerequests",
 ]
 
 MIDDLEWARE = [
@@ -195,3 +197,6 @@ MPESA_SHORTCODE = config("MPESA_SHORTCODE")
 MPESA_PASSKEY = config("MPESA_PASSKEY")
 MPESA_CALLBACK_URL = config("MPESA_CALLBACK_URL")
 MPESA_API_URL = config("MPESA_API_URL")
+
+# Loan Guarantee
+MEMBER_PERIOD = config("MEMBER_PERIOD")
