@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
+from django.utils import timezone
 
 from mwandamzeduapi.settings import MEMBER_PERIOD, MAX_GUARANTEES
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
@@ -43,25 +44,8 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
     def __str__(self):
         return f"{self.member.member_no} – Eligible: {self.is_eligible}"
 
-    def clean(self):
-        if self.is_eligible:
-            # must be member for the MEMBER_PERIOD specified
-            member_period = timezone.now() - relativedelta(months=MEMBER_PERIOD)
-            if self.member.created_at > member_period:
-                raise ValidationError(
-                    f"Member must be in SACCO for {MEMBER_PERIOD}+ months to guarantee"
-                )
-
     def save(self, *args, **kwargs):
-        self.clean()
         if self.is_eligible and not self.eligibility_checked_at:
             self.eligibility_checked_at = timezone.now()
+            
         return super().save(*args, **kwargs)
-
-    @property
-    def max_guarantee_amount(self):
-        total_savings = SavingsAccount.objects.filter(member=self.member).aggregate(
-            total=models.Sum("balance")
-        )["total"]
-        # A problem: should we subtract the current amount being guaranteed
-        return total_savings
