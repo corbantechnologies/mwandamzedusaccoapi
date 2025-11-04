@@ -8,6 +8,7 @@ class LoanProductSerializer(serializers.ModelSerializer):
     name = serializers.CharField(
         validators=[UniqueValidator(queryset=LoanProduct.objects.all())]
     )
+    is_active = serializers.BooleanField(default=True)
 
     class Meta:
         model = LoanProduct
