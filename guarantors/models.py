@@ -6,6 +6,7 @@ from dateutil.relativedelta import relativedelta
 
 from mwandamzeduapi.settings import MEMBER_PERIOD, MAX_GUARANTEES
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
+from savings.models import SavingsAccount
 
 User = get_user_model()
 
@@ -56,3 +57,11 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
         if self.is_eligible and not self.eligibility_checked_at:
             self.eligibility_checked_at = timezone.now()
         return super().save(*args, **kwargs)
+
+    @property
+    def max_guarantee_amount(self):
+        total_savings = SavingsAccount.objects.filter(member=self.member).aggregate(
+            total=models.Sum("balance")
+        )["total"]
+        # A problem: should we subtract the current amount being guaranteed
+        return total_savings
