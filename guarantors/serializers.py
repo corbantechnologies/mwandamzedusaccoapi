@@ -1,3 +1,4 @@
+# guarantors/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -15,7 +16,7 @@ User = get_user_model()
 
 class GuarantorProfileSerializer(serializers.ModelSerializer):
     member = serializers.CharField(source="member.member_no", read_only=True)
-    member_no = serializers.CharField(write_only=True)  # Accept input
+    member_no = serializers.CharField(write_only=True)
 
     active_guarantees_count = serializers.SerializerMethodField()
     committed_amount = serializers.SerializerMethodField()
@@ -43,20 +44,23 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         if data.get("is_eligible"):
             member_no = data.get("member_no")
             if not member_no:
-                raise serializers.ValidationError("Member number is required")
+                raise serializers.ValidationError(
+                    {"member_no": "This field is required."}
+                )
 
             try:
                 member = User.objects.get(member_no=member_no)
             except User.DoesNotExist:
-                raise serializers.ValidationError("Member not found")
+                raise serializers.ValidationError({"member_no": "Member not found."})
 
             months = int(MEMBER_PERIOD)
             required_date = timezone.now() - relativedelta(months=months)
-            if member.created_at > required_date:
+            if member.created_at and member.created_at > required_date:
                 raise serializers.ValidationError(
-                    f"Member must be at least {months} months old"
+                    {
+                        "is_eligible": f"Member must be in SACCO for {months}+ months to be eligible."
+                    }
                 )
-
         return data
 
     def get_active_guarantees_count(self, obj):
@@ -66,19 +70,21 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         total = GuaranteeRequest.objects.filter(
             guarantor=obj, status="Accepted"
         ).aggregate(total=models.Sum("guaranteed_amount"))["total"]
-        return float(total or 0)
+        return total or Decimal("0")  # → Decimal
 
     def get_max_guarantee_amount(self, obj):
-        # This should be the total savings account balance less committed amount
         total_savings = SavingsAccount.objects.filter(member=obj.member).aggregate(
             total=models.Sum("balance")
-        )["total"]
-        committed_amount = self.get_committed_amount(obj)
-        total_savings = total_savings - committed_amount
-        return float(total_savings or 0)
+        )["total"] or Decimal("0")
+
+        committed = self.get_committed_amount(obj)  # → Decimal
+        available = total_savings - committed
+        return float(available)  # Only convert to float at the end
 
     def get_has_reached_limit(self, obj):
-        return self.get_active_guarantees_count(obj) >= obj.max_active_guarantees
+        count = self.get_active_guarantees_count(obj)
+        max_limit = int(obj.max_active_guarantees)
+        return count >= max_limit
 
     def create(self, validated_data):
         member_no = validated_data.pop("member_no")
