@@ -10,6 +10,16 @@ User = get_user_model()
 
 
 class GuaranteeRequest(UniversalIdModel, TimeStampedModel, ReferenceModel):
+    """
+    Guarantee Request:
+    - Raised by the member requesting another member to guarantee
+    - Checks if member is eligible:
+        1. Potential Guarantor has an eligible guarantor profile
+        2. Potential Guarantor has not exceeded the guarantor limit
+    - If the member is eligible, a request is raised
+    - Guarantor approves or declines the request thereby updating the status
+    """
+
     STATUS_CHOICES = [
         ("Pending", "Pending"),
         ("Accepted", "Accepted"),
@@ -21,7 +31,7 @@ class GuaranteeRequest(UniversalIdModel, TimeStampedModel, ReferenceModel):
         User, on_delete=models.CASCADE, related_name="guarantor_requests"
     )
     loan_application = models.ForeignKey(
-        LoanApplication, on_delete=models.CASCADE, related_name="guarantee_requests"
+        LoanApplication, on_delete=models.CASCADE, related_name="guarantors"
     )
     guarantor = models.ForeignKey(
         GuarantorProfile, on_delete=models.CASCADE, related_name="guarantees"

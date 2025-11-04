@@ -14,9 +14,6 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
     loan_application = serializers.SlugRelatedField(
         slug_field="reference", queryset=LoanApplication.objects.all()
     )
-    status = serializers.ChoiceField(
-        read_only=True, choices=GuaranteeRequest.STATUS_CHOICES
-    )
 
     class Meta:
         model = GuaranteeRequest
@@ -29,3 +26,6 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
             "updated_at",
             "reference",
         )
+
+    def validate(self, attrs):
+        return super().validate(attrs)
