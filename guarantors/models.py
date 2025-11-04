@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 
-from mwandamzeduapi.settings import MEMBER_PERIOD
+from mwandamzeduapi.settings import MEMBER_PERIOD, MAX_GUARANTEES
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 
 User = get_user_model()
@@ -24,7 +24,8 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
     )
     eligibility_checked_at = models.DateTimeField(null=True, blank=True)
     max_active_guarantees = models.PositiveIntegerField(
-        default=3, help_text="Max number of loans this member can guarantee"
+        default=MAX_GUARANTEES,
+        help_text="Max number of loans this member can guarantee",
     )
     max_guarantee_amount = models.DecimalField(
         max_digits=15,

@@ -200,3 +200,4 @@ MPESA_API_URL = config("MPESA_API_URL")
 
 # Loan Guarantee
 MEMBER_PERIOD = config("MEMBER_PERIOD")
+MAX_GUARANTEES = config("MAX_GUARANTEES")
