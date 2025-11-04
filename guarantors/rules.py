@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from guaranteerequests.models import GuaranteeRequest
 
 
 class GuaranteeRule(ABC):
@@ -30,7 +31,6 @@ GUARANTEE_RULES = [Coverage100Rule(), MaxGuaranteesRule()]
 
 
 def validate_guarantee_rules(application):
-    from loanapplications.models import GuaranteeRequest
 
     accepted = application.guarantee_requests.filter(status="Accepted")
     for rule in GUARANTEE_RULES:

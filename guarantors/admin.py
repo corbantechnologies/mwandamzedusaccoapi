@@ -14,7 +14,7 @@ class GuarantorProfileAdmin(admin.ModelAdmin):
         "eligibility_checked_at",
     )
     list_filter = ("is_eligible", "max_active_guarantees")
-    search_fields = ("member__member_number", "member__first_name", "member__last_name")
+    search_fields = ("member__member_no", "member__first_name", "member__last_name")
     readonly_fields = ("eligibility_checked_at",)
 
     actions = ["enable_guarantor", "disable_guarantor"]

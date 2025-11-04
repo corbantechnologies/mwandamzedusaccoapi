@@ -5,7 +5,7 @@ from loanproducts.models import LoanProduct
 
 
 class LoanAccountSerializer(serializers.ModelSerializer):
-    member = serializers.CharField(source="member.member_number")
+    member = serializers.CharField(source="member.member_no")
     product = serializers.SlugRelatedField(
         slug_field="name", queryset=LoanProduct.objects.all()
     )

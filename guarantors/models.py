@@ -6,7 +6,6 @@ from dateutil.relativedelta import relativedelta
 
 from mwandamzeduapi.settings import MEMBER_PERIOD
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
-from guaranteerequests.models import GuaranteeRequest
 
 User = get_user_model()
 
@@ -40,7 +39,7 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.member.member_number} – Eligible: {self.is_eligible}"
+        return f"{self.member.member_no} – Eligible: {self.is_eligible}"
 
     def clean(self):
         if self.is_eligible:
@@ -56,14 +55,3 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
         if self.is_eligible and not self.eligibility_checked_at:
             self.eligibility_checked_at = timezone.now()
         return super().save(*args, **kwargs)
-
-    def active_guarantees_count(self):
-        return GuaranteeRequest.objects.filter(
-            guarantor=self, status="Accepted"
-        ).count()
-
-    def committed_amount(self):
-        total = GuaranteeRequest.objects.filter(
-            guarantor=self, status="Accepted"
-        ).aggregate(total=models.Sum("guaranteed_amount"))["total"]
-        return total or 0

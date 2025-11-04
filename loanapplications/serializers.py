@@ -1,16 +1,15 @@
+# loanapplications/serializers.py
 from rest_framework import serializers
-from loanapplications.models import LoanApplication
-from loanproducts.models import LoanProduct
-from loanapplications.calculators import flat_rate_projection
 from decimal import Decimal
 from datetime import date
 
-from guarantors.models import GuarantorProfile
-from guaranteerequests.models import GuaranteeRequest
+from loanapplications.models import LoanApplication
+from loanproducts.models import LoanProduct
+from loanapplications.calculators import flat_rate_projection
 
 
 class LoanApplicationSerializer(serializers.ModelSerializer):
-    member = serializers.CharField(source="member.member_number", read_only=True)
+    member = serializers.CharField(source="member.member_no", read_only=True)
     product = serializers.SlugRelatedField(
         slug_field="name",
         queryset=LoanProduct.objects.filter(is_active=True),
@@ -41,15 +40,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     def get_projection(self, obj):
         return obj.projection_snapshot
 
-    def get_can_submit(self, obj):
-        from guarantors.rules import validate_guarantee_rules
-
-        ok, _ = validate_guarantee_rules(obj)
-        return ok
-
-    # ------Projection Helpers------
+    # --- Projection Helpers ---
     def _should_recalculate_projection(self, validated_data, instance):
-        fields_to_check = [
+        fields = [
             "requested_amount",
             "term_months",
             "repayment_frequency",
@@ -57,22 +50,28 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "product",
         ]
         return any(
-            validated_data.get(field) != getattr(instance, field)
-            for field in fields_to_check
-            if field in validated_data
+            validated_data.get(f) != getattr(instance, f)
+            for f in fields
+            if f in validated_data
         )
 
-    def _generate_projection(self, validated_data, instance):
-        # Use updated product if provided, else fall back to instance
-        product = validated_data.get("product", instance.product)
-        principal = Decimal(
-            validated_data.get("requested_amount", instance.requested_amount)
-        )
-        term_months = validated_data.get("term_months", instance.term_months)
-        frequency = validated_data.get(
-            "repayment_frequency", instance.repayment_frequency
-        ).lower()
-        start_date = validated_data.get("start_date", instance.start_date)
+    def _generate_projection(self, validated_data, instance=None):
+        if instance is None:
+            product = validated_data["product"]
+            principal = Decimal(validated_data["requested_amount"])
+            term_months = validated_data["term_months"]
+            frequency = validated_data.get("repayment_frequency", "monthly").lower()
+            start_date = validated_data.get("start_date", date.today())
+        else:
+            product = validated_data.get("product", instance.product)
+            principal = Decimal(
+                validated_data.get("requested_amount", instance.requested_amount)
+            )
+            term_months = validated_data.get("term_months", instance.term_months)
+            frequency = validated_data.get(
+                "repayment_frequency", instance.repayment_frequency
+            ).lower()
+            start_date = validated_data.get("start_date", instance.start_date)
 
         return flat_rate_projection(
             principal=principal,
@@ -82,56 +81,27 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             repayment_frequency=frequency,
         )
 
-    # ------Create------
+    # --- Create ---
     def create(self, validated_data):
-        # Extract guarantee requests from raw data
-        guarantee_data = self.context["request"].data.get("guarantee_requests", [])
+        validated_data.pop("member", None)
 
-        # Generate projection
-        projection = self._generate_projection(validated_data, None)
-
-        # Create loan application instance
+        projection = self._generate_projection(validated_data)
         instance = LoanApplication.objects.create(
-            **validated_data, projection_snapshot=projection, status="In Progress"
+            **validated_data,
+            member=self.context["request"].user,
+            projection_snapshot=projection,
+            status="In Progress"
         )
-
-        # Create guarantee requests
-        for item in guarantee_data:
-            guarantor = GuarantorProfile.objects.get(
-                member__member_no=item["guarantor"]
-            )
-            GuaranteeRequest.objects.create(
-                loan_application=instance,
-                guarantor=guarantor,
-                guaranteed_amount=item["guaranteed_amount"],
-            )
         return instance
 
+    # --- Update ---
     def update(self, instance, validated_data):
-        # Handle guarantee requests (optional on update)
-        guarantee_data = self.context["request"].data.get("guarantee_requests")
-        if guarantee_data is not None:
-            # Delete old, create new
-            instance.guarantee_requests.all().delete()
-            for item in guarantee_data:
-                guarantor = GuarantorProfile.objects.get(
-                    member__member_number=item["guarantor"]
-                )
-                GuaranteeRequest.objects.create(
-                    loan_application=instance,
-                    guarantor=guarantor,
-                    guaranteed_amount=item["guaranteed_amount"],
-                )
-                
-        # Only recalculate if a relevant field changed
         if self._should_recalculate_projection(validated_data, instance):
             projection = self._generate_projection(validated_data, instance)
             validated_data["projection_snapshot"] = projection
-            # Auto-set status to In Progress on recalculation
             if "status" not in validated_data:
                 validated_data["status"] = "In Progress"
 
-        # Apply updates
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()

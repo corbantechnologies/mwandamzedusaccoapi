@@ -6,8 +6,9 @@ from guarantors.models import GuarantorProfile
 
 
 class GuaranteeRequestSerializer(serializers.ModelSerializer):
+    member = serializers.CharField(source="member.member_no", read_only=True)
     guarantor = serializers.SlugRelatedField(
-        slug_field="member_number",
+        slug_field="member_no",
         queryset=GuarantorProfile.objects.filter(is_eligible=True),
     )
     loan_application = serializers.SlugRelatedField(

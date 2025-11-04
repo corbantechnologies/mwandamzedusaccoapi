@@ -17,6 +17,9 @@ class GuaranteeRequest(UniversalIdModel, TimeStampedModel, ReferenceModel):
         ("Cancelled", "Cancelled"),
     ]
 
+    member = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="guarantor_requests"
+    )
     loan_application = models.ForeignKey(
         LoanApplication, on_delete=models.CASCADE, related_name="guarantee_requests"
     )
