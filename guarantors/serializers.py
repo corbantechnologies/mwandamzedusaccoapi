@@ -61,6 +61,17 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
                         "is_eligible": f"Member must be in SACCO for {months}+ months to be eligible."
                     }
                 )
+
+        member_no = data.get("member_no")
+        if member_no:
+            try:
+                member = User.objects.get(member_no=member_no)
+                if GuarantorProfile.objects.filter(member=member).exists():
+                    raise serializers.ValidationError(
+                        {"member_no": "Member already has a Guarantor Profile."}
+                    )
+            except User.DoesNotExist:
+                pass
         return data
 
     def get_active_guarantees_count(self, obj):
