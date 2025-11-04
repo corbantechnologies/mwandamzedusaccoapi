@@ -6,8 +6,9 @@ from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
 from mwandamzeduapi.settings import MEMBER_PERIOD
-from .models import GuarantorProfile
+from guarantors.models import GuarantorProfile
 from guaranteerequests.models import GuaranteeRequest
+from savings.models import SavingsAccount
 
 User = get_user_model()
 
@@ -68,7 +69,13 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         return float(total or 0)
 
     def get_max_guarantee_amount(self, obj):
-        return float(obj.max_guarantee_amount)
+        # This should be the total savings account balance less committed amount
+        total_savings = SavingsAccount.objects.filter(member=obj.member).aggregate(
+            total=models.Sum("balance")
+        )["total"]
+        committed_amount = self.get_committed_amount(obj)
+        total_savings = total_savings - committed_amount
+        return float(total_savings or 0)
 
     def get_has_reached_limit(self, obj):
         return self.get_active_guarantees_count(obj) >= obj.max_active_guarantees
