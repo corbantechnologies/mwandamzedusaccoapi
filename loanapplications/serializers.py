@@ -172,6 +172,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
     # --- Create ---
     def create(self, validated_data):
+        # Prevent duplicate 'member'
+        validated_data.pop("member", None)
+
         projection = self._generate_projection(validated_data)
         instance = LoanApplication.objects.create(
             member=self.context["request"].user,
