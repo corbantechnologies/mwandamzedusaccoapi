@@ -1,3 +1,4 @@
+# loanapplications/serializers.py
 from rest_framework import serializers
 from decimal import Decimal
 from datetime import date
@@ -45,7 +46,13 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "created_at",
             "reference",
         )
-        read_only_fields = ("status", "projection", "created_at", "reference")
+        read_only_fields = (
+            "status",
+            "projection",
+            "can_submit",
+            "created_at",
+            "reference",
+        )
 
     def get_projection(self, obj):
         return obj.projection_snapshot
@@ -55,6 +62,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
     # --- Helpers ---
     def _is_first_loan(self, member):
+        """True if member has no LoanAccount → never had an approved loan"""
         return not LoanAccount.objects.filter(member=member).exists()
 
     def _total_savings(self, member):
@@ -64,6 +72,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         return total or Decimal("0")
 
     def _can_submit_without_guarantors(self, instance):
+        if not instance.member or instance.requested_amount is None:
+            return False
+
         member = instance.member
         amount = instance.requested_amount
         savings = self._total_savings(member)
@@ -87,19 +98,42 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         request = self.context["request"]
         member = request.user
 
-        # Build temp instance
+        # For CREATE: requested_amount required
+        if not self.instance and "requested_amount" not in data:
+            raise serializers.ValidationError(
+                {"requested_amount": "This field is required."}
+            )
+
+        # Use instance value if not in data (PATCH)
+        requested_amount = data.get("requested_amount")
+        if requested_amount is None and self.instance:
+            requested_amount = self.instance.requested_amount
+        if requested_amount is None:
+            raise serializers.ValidationError(
+                {"requested_amount": "This field is required."}
+            )
+
+        # Build temp instance with fallbacks
         temp_instance = LoanApplication(
             member=member,
-            requested_amount=data["requested_amount"],
-            **{
-                k: data.get(k)
-                for k in ["product", "term_months", "repayment_frequency", "start_date"]
-            },
+            requested_amount=requested_amount,
+            product=data.get("product", getattr(self.instance, "product", None)),
+            term_months=data.get(
+                "term_months", getattr(self.instance, "term_months", None)
+            ),
+            repayment_frequency=data.get(
+                "repayment_frequency",
+                getattr(self.instance, "repayment_frequency", "monthly"),
+            ),
+            start_date=data.get(
+                "start_date", getattr(self.instance, "start_date", date.today())
+            ),
         )
 
-        # Rule 1 & 2: First-time borrower
-        if self._is_first_loan(member):
-            # 2. Member age
+        # Rule 1 & 2: First-time borrower (only if amount changed or create)
+        if self._is_first_loan(member) and (
+            "requested_amount" in data or not self.instance
+        ):
             months = int(FIRST_LOAN_MIN_MEMBER_MONTHS)
             required_date = timezone.now() - relativedelta(months=months)
             if member.created_at > required_date:
@@ -111,17 +145,16 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
                     }
                 )
 
-            # 1. Max 80% of savings
             savings = self._total_savings(member)
             max_allowed = savings * Decimal(FIRST_LOAN_MAX_SAVINGS_PERCENT) / 100
-            if data["requested_amount"] > max_allowed:
+            if requested_amount > max_allowed:
                 raise serializers.ValidationError(
                     {
                         "requested_amount": f"First-time loan limited to {FIRST_LOAN_MAX_SAVINGS_PERCENT}% of savings (max: {max_allowed})."
                     }
                 )
 
-        # Set status based on readiness
+        # Set status
         if self._can_submit_without_guarantors(temp_instance):
             data["status"] = "Ready for Submission"
         else:
@@ -172,9 +205,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
     # --- Create ---
     def create(self, validated_data):
-        # Prevent duplicate 'member'
-        validated_data.pop("member", None)
-
+        validated_data.pop("member", None)  # Safety
         projection = self._generate_projection(validated_data)
         instance = LoanApplication.objects.create(
             member=self.context["request"].user,
@@ -189,16 +220,19 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             projection = self._generate_projection(validated_data, instance)
             validated_data["projection_snapshot"] = projection
 
-        # Re-evaluate readiness
+        # Rebuild temp instance
+        requested_amount = validated_data.get(
+            "requested_amount", instance.requested_amount
+        )
         temp_instance = LoanApplication(
             member=instance.member,
-            requested_amount=validated_data.get(
-                "requested_amount", instance.requested_amount
+            requested_amount=requested_amount,
+            product=validated_data.get("product", instance.product),
+            term_months=validated_data.get("term_months", instance.term_months),
+            repayment_frequency=validated_data.get(
+                "repayment_frequency", instance.repayment_frequency
             ),
-            **{
-                k: validated_data.get(k, getattr(instance, k))
-                for k in ["product", "term_months", "repayment_frequency", "start_date"]
-            },
+            start_date=validated_data.get("start_date", instance.start_date),
         )
 
         if self._can_submit_without_guarantors(temp_instance):

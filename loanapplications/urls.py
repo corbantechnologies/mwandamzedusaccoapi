@@ -3,6 +3,7 @@ from django.urls import path
 from loanapplications.views import (
     LoanApplicationDetailView,
     LoanApplicationListCreateView,
+    SubmitLoanApplicationView,
 )
 
 app_name = "loanapplications"
@@ -13,5 +14,10 @@ urlpatterns = [
         "<str:reference>/",
         LoanApplicationDetailView.as_view(),
         name="loanapplication-detail",
+    ),
+    path(
+        "<str:reference>/submit/",
+        SubmitLoanApplicationView.as_view(),
+        name="submit-loanapplication",
     ),
 ]
