@@ -216,11 +216,20 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
     # --- Update ---
     def update(self, instance, validated_data):
+        FINAL_STATES = ["Submitted", "Approved", "Disbursed", "Declined", "Cancelled"]
+
+        # Double-check: block in update too
+        if instance.status in FINAL_STATES:
+            raise serializers.ValidationError(
+                {"detail": f"Cannot update application in '{instance.status}' state."}
+            )
+
+        # Recalculate projection
         if self._should_recalculate_projection(validated_data, instance):
             projection = self._generate_projection(validated_data, instance)
             validated_data["projection_snapshot"] = projection
 
-        # Rebuild temp instance
+        # Re-evaluate readiness
         requested_amount = validated_data.get(
             "requested_amount", instance.requested_amount
         )
@@ -247,7 +256,10 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
 
 class LoanStatusUpdateSerializer(serializers.ModelSerializer):
-    status = serializers.ChoiceField(choices=LoanApplication.STATUS_CHOICES, required=False)
+    status = serializers.ChoiceField(
+        choices=LoanApplication.STATUS_CHOICES, required=False
+    )
+
     class Meta:
         model = LoanApplication
         fields = ("status",)
