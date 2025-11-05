@@ -16,6 +16,7 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
 
     STATUS_CHOICES = [
         ("Active", "Active"),
+        ("Funded", "Funded"),
         ("Closed", "Closed"),
         ("Defaulted", "Defaulted"),
     ]

@@ -244,3 +244,11 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
         return instance
+
+
+class LoanStatusUpdateSerializer(serializers.ModelSerializer):
+    status = serializers.ChoiceField(choices=LoanApplication.STATUS_CHOICES, required=False)
+    class Meta:
+        model = LoanApplication
+        fields = ("status",)
+        extra_kwargs = {"status": {"required": True}}

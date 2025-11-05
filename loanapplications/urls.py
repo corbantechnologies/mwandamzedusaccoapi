@@ -4,6 +4,7 @@ from loanapplications.views import (
     LoanApplicationDetailView,
     LoanApplicationListCreateView,
     SubmitLoanApplicationView,
+    ApproveOrDeclineLoanApplicationView,
 )
 
 app_name = "loanapplications"
@@ -19,5 +20,10 @@ urlpatterns = [
         "<str:reference>/submit/",
         SubmitLoanApplicationView.as_view(),
         name="submit-loanapplication",
+    ),
+    path(
+        "<str:reference>/status/",
+        ApproveOrDeclineLoanApplicationView.as_view(),
+        name="approve-or-decline-loanapplication",
     ),
 ]
