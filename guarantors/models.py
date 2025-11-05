@@ -1,13 +1,10 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.utils import timezone
-from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 
-from mwandamzeduapi.settings import MEMBER_PERIOD, MAX_GUARANTEES
+from mwandamzeduapi.settings import MAX_GUARANTEES
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
-from savings.models import SavingsAccount
 
 User = get_user_model()
 
@@ -47,5 +44,5 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
     def save(self, *args, **kwargs):
         if self.is_eligible and not self.eligibility_checked_at:
             self.eligibility_checked_at = timezone.now()
-            
+
         return super().save(*args, **kwargs)

@@ -11,10 +11,12 @@ class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
     STATUS_CHOICES = [
         ("Pending", "Pending"),
         ("In Progress", "In Progress"),
+        ("Ready for Submission", "Ready for Submission"),
         ("Submitted", "Submitted"),
         ("Approved", "Approved"),
         ("Disbursed", "Disbursed"),
         ("Declined", "Declined"),
+        ("Cancelled", "Cancelled"),
     ]
 
     REPAYMENT_FREQUENCY_CHOICES = [
