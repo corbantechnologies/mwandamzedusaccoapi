@@ -39,6 +39,9 @@ class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
     repayment_frequency = models.CharField(
         max_length=40, choices=REPAYMENT_FREQUENCY_CHOICES, default="monthly"
     )
+    repayment_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, null=True, blank=True
+    )
     start_date = models.DateField(
         default=date.today, help_text="Loan disbursement date (used for projection)"
     )
