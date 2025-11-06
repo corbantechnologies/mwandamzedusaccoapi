@@ -12,6 +12,7 @@ from loanapplications.serializers import (
 )
 from loanaccounts.models import LoanAccount
 from accounts.permissions import IsSystemAdminOrReadOnly
+from loanaccounts.serializers import LoanAccountSerializer
 
 
 class LoanApplicationListCreateView(generics.ListCreateAPIView):
@@ -56,7 +57,10 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
             )
 
         # Must be Ready for Submission
-        if application.status != "Ready for Submission" and application.status != "Submitted":
+        if (
+            application.status != "Ready for Submission"
+            and application.status != "Submitted"
+        ):
             return Response(
                 {"detail": "Application is not ready for submission."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -126,7 +130,7 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                     "status": f"Cannot {new_status.lower()} an application in '{instance.status}' state."
                 }
             )
-        
+
         # Calculate end date
         end_date = instance.start_date
         if instance.repayment_frequency == "monthly":
@@ -134,31 +138,42 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
         elif instance.repayment_frequency == "weekly":
             end_date += timedelta(weeks=instance.term_months * 4.345)
 
+        loan_account = None
         # --- Auto-create LoanAccount on Approval ---
         if new_status == "Approved":
             with transaction.atomic():
-                LoanAccount.objects.create(
+                loan_account = LoanAccount.objects.create(
                     member=instance.member,
                     product=instance.product,
                     principal=instance.requested_amount,
                     outstanding_balance=instance.repayment_amount,
                     start_date=instance.start_date,
+                    last_interest_calculation=instance.start_date,
                     status="Active",
                     total_interest_accrued=instance.total_interest,
                     end_date=end_date,
                 )
                 serializer.save(status=new_status)
+
+                instance.loan_account = loan_account
         else:
             serializer.save(status=new_status)
+
+        self.loan_account = loan_account
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
         instance = self.get_object()
 
+        data = {
+            "detail": f"Application {instance.status.lower()}.",
+            "application": LoanApplicationSerializer(instance).data,
+        }
+
+        if hasattr(self, "loan_account") and self.loan_account:
+            data["loan_account"] = LoanAccountSerializer(self.loan_account).data
+
         return Response(
-            {
-                "detail": f"Application {instance.status.lower()}.",
-                "application": LoanApplicationSerializer(instance).data,
-            },
+            data,
             status=status.HTTP_200_OK,
         )
