@@ -146,11 +146,13 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                     member=instance.member,
                     product=instance.product,
                     principal=instance.requested_amount,
-                    outstanding_balance=instance.repayment_amount,
+                    outstanding_balance=instance.projection_snapshot["total_repayment"],
                     start_date=instance.start_date,
-                    last_interest_calculation=instance.start_date,
+                    last_interest_calulation=instance.start_date,
                     status="Active",
-                    total_interest_accrued=instance.total_interest,
+                    total_interest_accrued=instance.projection_snapshot[
+                        "total_interest"
+                    ],
                     end_date=end_date,
                 )
                 serializer.save(status=new_status)

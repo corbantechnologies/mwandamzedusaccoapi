@@ -1,4 +1,3 @@
-# guarantors/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -78,19 +77,14 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         return GuaranteeRequest.objects.filter(guarantor=obj, status="Accepted").count()
 
     def get_committed_amount(self, obj):
-        total = GuaranteeRequest.objects.filter(
-            guarantor=obj, status="Accepted"
-        ).aggregate(total=models.Sum("guaranteed_amount"))["total"]
-        return total or Decimal("0")  # → Decimal
+        return obj.committed_amount()  # ← method
 
     def get_max_guarantee_amount(self, obj):
-        total_savings = SavingsAccount.objects.filter(member=obj.member).aggregate(
-            total=models.Sum("balance")
-        )["total"] or Decimal("0")
-
-        committed = self.get_committed_amount(obj)  # → Decimal
+        total_savings = SavingsAccount.objects.filter(member=obj.member)\
+            .aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
+        committed = obj.committed_amount()
         available = total_savings - committed
-        return float(available)  # Only convert to float at the end
+        return float(available)
 
     def get_has_reached_limit(self, obj):
         count = self.get_active_guarantees_count(obj)
@@ -100,4 +94,15 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         member_no = validated_data.pop("member_no")
         member = User.objects.get(member_no=member_no)
-        return GuarantorProfile.objects.create(member=member, **validated_data)
+
+        # Calculate max_guarantee_amount from savings
+        total_savings = SavingsAccount.objects.filter(member=member)\
+            .aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
+
+        # Create with max_guarantee_amount
+        profile = GuarantorProfile.objects.create(
+            member=member,
+            max_guarantee_amount=total_savings,  # ← SET HERE
+            **validated_data
+        )
+        return profile

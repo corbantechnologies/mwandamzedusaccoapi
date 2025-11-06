@@ -1,10 +1,11 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from django.utils import timezone
 
 from mwandamzeduapi.settings import MAX_GUARANTEES
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
+from savings.models import SavingsAccount
 
 User = get_user_model()
 
@@ -18,19 +19,11 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
     member = models.OneToOneField(
         User, on_delete=models.CASCADE, related_name="guarantor_profile"
     )
-    is_eligible = models.BooleanField(
-        default=False, help_text="Admin has approved this member to be a guarantor"
-    )
+    is_eligible = models.BooleanField(default=False)
     eligibility_checked_at = models.DateTimeField(null=True, blank=True)
-    max_active_guarantees = models.PositiveIntegerField(
-        default=MAX_GUARANTEES,
-        help_text="Max number of loans this member can guarantee",
-    )
+    max_active_guarantees = models.PositiveIntegerField(default=MAX_GUARANTEES)
     max_guarantee_amount = models.DecimalField(
-        max_digits=15,
-        decimal_places=2,
-        default=0,
-        help_text="Max total amount this member can guarantee",
+        max_digits=15, decimal_places=2, default=0
     )
 
     class Meta:
@@ -45,4 +38,17 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
         if self.is_eligible and not self.eligibility_checked_at:
             self.eligibility_checked_at = timezone.now()
 
-        return super().save(*args, **kwargs)
+        if self.reference:
+            total_savings = SavingsAccount.objects.filter(member=self.member).aggregate(
+                total=models.Sum("balance")
+            )["total"] or Decimal("0")
+            self.max_guarantee_amount = total_savings
+
+        super().save(*args, **kwargs)
+
+    def committed_amount(self):
+        """Dynamic: sum of Accepted guarantees"""
+        total = self.guarantees.filter(status="Accepted").aggregate(
+            total=models.Sum("guaranteed_amount")
+        )["total"]
+        return total or Decimal("0")

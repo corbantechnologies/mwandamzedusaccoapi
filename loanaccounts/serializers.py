@@ -20,6 +20,7 @@ class LoanAccountSerializer(serializers.ModelSerializer):
             "outstanding_balance",
             "start_date",
             "end_date",
+            "total_interest_accrued",
             "last_interest_calulation",
             "status",
             "created_at",
