@@ -33,13 +33,13 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoanApplication
         fields = (
-            "id",
             "member",
             "product",
             "requested_amount",
             "term_months",
             "repayment_frequency",
             "repayment_amount",
+            "total_interest",
             "start_date",
             "status",
             "can_submit",
@@ -212,6 +212,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             member=self.context["request"].user,
             projection_snapshot=projection,
             repayment_amount=projection["total_repayment"],
+            total_interest=projection["total_interest"],
             **validated_data,
         )
         return instance
@@ -231,6 +232,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             projection = self._generate_projection(validated_data, instance)
             validated_data["projection_snapshot"] = projection
             validated_data["repayment_amount"] = projection["total_repayment"]
+            validated_data["total_interest"] = projection["total_interest"]
 
         # Re-evaluate readiness
         requested_amount = validated_data.get(
@@ -241,6 +243,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             requested_amount=requested_amount,
             repayment_amount=validated_data.get(
                 "repayment_amount", instance.repayment_amount
+            ),
+            total_interest=validated_data.get(
+                "total_interest", instance.total_interest
             ),
             product=validated_data.get("product", instance.product),
             term_months=validated_data.get("term_months", instance.term_months),

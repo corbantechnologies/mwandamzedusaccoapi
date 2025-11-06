@@ -2,6 +2,8 @@ from rest_framework import generics, status, serializers
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from dateutil.relativedelta import relativedelta
+from datetime import timedelta
 
 from loanapplications.models import LoanApplication
 from loanapplications.serializers import (
@@ -54,7 +56,7 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
             )
 
         # Must be Ready for Submission
-        if application.status != "Ready for Submission":
+        if application.status != "Ready for Submission" and application.status != "Submitted":
             return Response(
                 {"detail": "Application is not ready for submission."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -124,6 +126,13 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                     "status": f"Cannot {new_status.lower()} an application in '{instance.status}' state."
                 }
             )
+        
+        # Calculate end date
+        end_date = instance.start_date
+        if instance.repayment_frequency == "monthly":
+            end_date += relativedelta(months=instance.term_months)
+        elif instance.repayment_frequency == "weekly":
+            end_date += timedelta(weeks=instance.term_months * 4.345)
 
         # --- Auto-create LoanAccount on Approval ---
         if new_status == "Approved":
@@ -132,9 +141,11 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                     member=instance.member,
                     product=instance.product,
                     principal=instance.requested_amount,
-                    outstanding_balance=instance.requested_amount,
+                    outstanding_balance=instance.repayment_amount,
                     start_date=instance.start_date,
                     status="Active",
+                    total_interest_accrued=instance.total_interest,
+                    end_date=end_date,
                 )
                 serializer.save(status=new_status)
         else:

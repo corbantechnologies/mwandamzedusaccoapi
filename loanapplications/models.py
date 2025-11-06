@@ -42,6 +42,9 @@ class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
     repayment_amount = models.DecimalField(
         max_digits=15, decimal_places=2, null=True, blank=True
     )
+    total_interest = models.DecimalField(
+        max_digits=15, decimal_places=2, null=True, blank=True
+    )
     start_date = models.DateField(
         default=date.today, help_text="Loan disbursement date (used for projection)"
     )
