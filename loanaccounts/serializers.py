@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from loanaccounts.models import LoanAccount
 from loanproducts.models import LoanProduct
+from loanapplications.models import LoanApplication
 
 
 class LoanAccountSerializer(serializers.ModelSerializer):
@@ -9,17 +10,22 @@ class LoanAccountSerializer(serializers.ModelSerializer):
     product = serializers.SlugRelatedField(
         slug_field="name", queryset=LoanProduct.objects.all()
     )
+    application = serializers.SlugRelatedField(
+        slug_field="reference", queryset=LoanApplication.objects.all()
+    )
 
     class Meta:
         model = LoanAccount
         fields = (
             "member",
             "product",
+            "application",
             "account_number",
             "principal",
             "outstanding_balance",
             "start_date",
             "end_date",
+            "total_interest_accrued",
             "last_interest_calulation",
             "status",
             "created_at",

@@ -16,7 +16,7 @@ urlpatterns = [
         name="guarantee-request-detail",
     ),
     path(
-        "<str:reference>/update-status/",
+        "<str:reference>/status/",
         GuaranteeRequestUpdateStatusView.as_view(),
         name="guarantee-request-update-status",
     ),

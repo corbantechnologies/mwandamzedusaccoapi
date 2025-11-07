@@ -16,6 +16,7 @@ from savings.serializers import SavingSerializer
 from ventureaccounts.serializers import VentureAccountSerializer
 from loanaccounts.serializers import LoanAccountSerializer
 from loanapplications.serializers import LoanApplicationSerializer
+from guarantors.serializers import GuarantorProfileSerializer
 
 
 User = get_user_model()
@@ -38,6 +39,7 @@ class BaseUserSerializer(serializers.ModelSerializer):
     venture_accounts = VentureAccountSerializer(many=True, read_only=True)
     loan_accounts = LoanAccountSerializer(many=True, read_only=True)
     loan_applications = LoanApplicationSerializer(many=True, read_only=True)
+    guarantor_profile = GuarantorProfileSerializer(read_only=True)
 
     class Meta:
         model = User
@@ -66,6 +68,7 @@ class BaseUserSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "guarantor_profile",
             "savings",
             "venture_accounts",
             "loan_accounts",
