@@ -38,6 +38,7 @@ class GuaranteeRequest(UniversalIdModel, TimeStampedModel, ReferenceModel):
     )
     guaranteed_amount = models.DecimalField(max_digits=15, decimal_places=2)
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default="Pending")
+    notes = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Guarantee Request"

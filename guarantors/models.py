@@ -48,7 +48,7 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
 
     def committed_amount(self):
         """Dynamic: sum of Accepted guarantees"""
-        total = self.guarantees.filter(status="Accepted").aggregate(
-            total=models.Sum("guaranteed_amount")
-        )["total"]
+        total = self.guarantees.filter(
+            status="Accepted", loan_application__status__in=["Active", "Funded"]
+        ).aggregate(total=models.Sum("guaranteed_amount"))["total"]
         return total or Decimal("0")

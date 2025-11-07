@@ -28,6 +28,7 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
             "guarantor",
             "guaranteed_amount",
             "status",
+            "notes",
             "created_at",
             "updated_at",
             "reference",
@@ -114,6 +115,11 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
             loan = instance.loan_application
             loan.self_guaranteed_amount = instance.guaranteed_amount
             loan.save(update_fields=["self_guaranteed_amount"])
+
+            #  update guarantor profile
+            # guarantor = instance.guarantor
+            # guarantor.committed_amount += instance.guaranteed_amount
+            # guarantor.save(update_fields=["committed_amount"])
 
             # Auto-ready if fully covered
             if loan.is_fully_covered:

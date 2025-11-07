@@ -99,6 +99,10 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
                 # update self_guaranteed_amount
                 application.self_guaranteed_amount = application.requested_amount
                 application.save(update_fields=["self_guaranteed_amount"])
+
+                # # update guarantor profile
+                # guarantor_profile.max_guarantee_amount -= application.requested_amount
+                # guarantor_profile.save(update_fields=["max_guarantee_amount"])
             except GuarantorProfile.DoesNotExist:
                 return Response(
                     {
@@ -168,7 +172,6 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
         elif instance.repayment_frequency == "weekly":
             end_date += timedelta(weeks=instance.term_months * 4.345)
 
-        loan_account = None
         # --- Auto-create LoanAccount on Approval ---
         if new_status == "Approved":
             with transaction.atomic():
@@ -189,10 +192,17 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                 serializer.save(status=new_status)
 
                 instance.loan_account = loan_account
+                self.loan_account = loan_account
         else:
-            serializer.save(status=new_status)
+            with transaction.atomic():
+                # 1. Reset self_guaranteed_amount
+                if instance.self_guaranteed_amount > 0:
+                    instance.self_guaranteed_amount = 0
+                    instance.save(update_fields=["self_guaranteed_amount"])
 
-        self.loan_account = loan_account
+                instance.status = "Declined"
+                instance.save(update_fields=["status"])
+                serializer.save(status=new_status)
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
