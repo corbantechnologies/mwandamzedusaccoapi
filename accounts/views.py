@@ -94,7 +94,11 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
             .get_queryset()
             .filter(id=self.request.user.id)
             .prefetch_related(
-                "venture_accounts", "savings", "loan_applications", "loan_accounts"
+                "venture_accounts",
+                "savings",
+                "loan_applications",
+                "loan_accounts",
+                "guarantor_profile",
             )
         )
 
@@ -135,9 +139,17 @@ class MemberListView(generics.ListAPIView):
         Users with is_sacco_admin are also members
         """
         return super().get_queryset().filter(is_member=True).prefetch_related(
-            "venture_accounts", "savings", "loan_applications", "loan_accounts"
+            "venture_accounts",
+            "savings",
+            "loan_applications",
+            "loan_accounts",
+            "guarantor_profile",
         ) | super().get_queryset().filter(is_sacco_admin=True).prefetch_related(
-            "venture_accounts", "savings", "loan_applications", "loan_accounts"
+            "venture_accounts",
+            "savings",
+            "loan_applications",
+            "loan_accounts",
+            "guarantor_profile",
         )
 
 
