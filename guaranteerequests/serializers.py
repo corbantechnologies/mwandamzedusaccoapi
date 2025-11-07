@@ -103,23 +103,19 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
         validated_data["member"] = self.context["request"].user
         instance = super().create(validated_data)
 
-        # AUTO-ACCEPT SELF-GUARANTEE
+        # AUTO-ACCEPT SELF-GUARANTEE ONLY
         if instance.guarantor.member == instance.member:
-            instance.status = "Approved"
+            instance.status = "Accepted"
             instance.save(update_fields=["status"])
 
-            # update loan
             loan = instance.loan_application
             loan.self_guaranteed_amount = instance.guaranteed_amount
             loan.save(update_fields=["self_guaranteed_amount"])
 
-            #  update guarantor profile
-            # guarantor = instance.guarantor
-            # guarantor.committed_amount += instance.guaranteed_amount
-            # guarantor.save(update_fields=["committed_amount"])
+            # Reserve for self (already handled in submit view)
+            # → No double-reservation here
 
-            # Auto-ready if fully covered
-            if loan.is_fully_covered:
+            if compute_loan_coverage(loan)["is_fully_covered"]:
                 loan.status = "Ready for Submission"
                 loan.save(update_fields=["status"])
 
@@ -127,9 +123,7 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
 
 
 class GuaranteeApprovalDeclineSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(
-        choices=GuaranteeRequest.STATUS_CHOICES, required=True
-    )
+    status = serializers.ChoiceField(choices=["Accepted", "Declined"], required=True)
 
     class Meta:
         model = GuaranteeRequest

@@ -48,7 +48,6 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
         super().save(*args, **kwargs)
 
     def available_capacity(self):
-        """Available amount for new guarantees"""
         return max(
             Decimal("0"), self.max_guarantee_amount - self.committed_guarantee_amount
         )

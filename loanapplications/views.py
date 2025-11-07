@@ -4,7 +4,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta
-from django.db import models
+from django.db.models import F
+
 
 from loanapplications.models import LoanApplication
 from loanapplications.serializers import (
@@ -191,21 +192,27 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
 
         else:  # Declined
             with transaction.atomic():
-                # REVERT SELF-GUARANTEE RESERVATION
+                # 1. Revert self-guarantee
                 if instance.self_guaranteed_amount > 0:
                     try:
                         profile = instance.member.guarantor_profile
-                        profile.committed_guarantee_amount = (
-                            models.F("committed_guarantee_amount")
-                            - instance.self_guaranteed_amount
-                        )
-                        profile.save(update_fields=["committed_guarantee_amount"])
+                        profile.committed_guarantee_amount = F('committed_guarantee_amount') - instance.self_guaranteed_amount
+                        profile.save(update_fields=['committed_guarantee_amount'])
                     except GuarantorProfile.DoesNotExist:
                         pass
-
                     instance.self_guaranteed_amount = 0
                     instance.save(update_fields=["self_guaranteed_amount"])
 
+                # 2. Revert ALL external accepted guarantees
+                for guarantee in instance.guarantors.filter(status="Accepted"):
+                    profile = guarantee.guarantor
+                    profile.committed_guarantee_amount = F('committed_guarantee_amount') - guarantee.guaranteed_amount
+                    profile.save(update_fields=['committed_guarantee_amount'])
+                    guarantee.status = "Cancelled"
+                    guarantee.save(update_fields=["status"])
+
+                instance.status = "Declined"
+                instance.save(update_fields=["status"])
                 serializer.save(status="Declined")
 
     def update(self, request, *args, **kwargs):

@@ -6,23 +6,26 @@ from loanaccounts.models import LoanAccount
 from loanapplications.models import LoanApplication
 
 
+# loanapplications/utils.py
 def compute_loan_coverage(application):
     total_savings = SavingsAccount.objects.filter(member=application.member).aggregate(
         t=models.Sum("balance")
     )["t"] or Decimal("0")
 
-    # Committed self-guarantees (active loans + submitted)
+    # Active self-guarantees from approved loans
     committed_self = LoanApplication.objects.filter(
         member=application.member,
         loan_account__status__in=["Active", "Funded"],
         self_guaranteed_amount__gt=0,
     ).aggregate(t=models.Sum("self_guaranteed_amount"))["t"] or Decimal("0")
 
-    # Include current submitted self-guarantee (if any)
+    # Include submitted self-guarantee
     if application.status == "Submitted" and application.self_guaranteed_amount > 0:
         committed_self += application.self_guaranteed_amount
 
     available_self = max(Decimal("0"), total_savings - committed_self)
+
+    # External accepted guarantees (including pending submit)
     total_guaranteed_by_others = application.guarantors.filter(
         status="Accepted"
     ).aggregate(t=models.Sum("guaranteed_amount"))["t"] or Decimal("0")
