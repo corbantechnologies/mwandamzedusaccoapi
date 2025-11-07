@@ -13,6 +13,9 @@ from loanapplications.serializers import (
 from loanaccounts.models import LoanAccount
 from accounts.permissions import IsSystemAdminOrReadOnly
 from loanaccounts.serializers import LoanAccountSerializer
+from guaranteerequests.models import GuaranteeRequest
+from loanapplications.utils import compute_loan_coverage
+from guarantors.models import GuarantorProfile
 
 
 class LoanApplicationListCreateView(generics.ListCreateAPIView):
@@ -73,9 +76,36 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Compute loan coverage
+        coverage = compute_loan_coverage(application)
+
         # Submit
         application.status = "Submitted"
         application.save(update_fields=["status"])
+
+        # AUTO-CREATE SELF-GUARANTEE IF FULLY SELF COVERED
+        if coverage["is_fully_covered"] and coverage["total_guaranteed_by_others"] == 0:
+            try:
+                guarantor_profile = GuarantorProfile.objects.get(
+                    member=application.member
+                )
+                GuaranteeRequest.objects.create(
+                    member=application.member,
+                    loan_application=application,
+                    guarantor=guarantor_profile,
+                    guaranteed_amount=application.requested_amount,
+                    status="Accepted",
+                )
+                # update self_guaranteed_amount
+                application.self_guaranteed_amount = application.requested_amount
+                application.save(update_fields=["self_guaranteed_amount"])
+            except GuarantorProfile.DoesNotExist:
+                return Response(
+                    {
+                        "detail": "Unable to create self-guarantee. Please add guarantor profile."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         serializer = self.get_serializer(application)
         return Response(
