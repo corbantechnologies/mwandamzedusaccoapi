@@ -4,6 +4,7 @@ from decimal import Decimal
 from guaranteerequests.models import GuaranteeRequest
 from loanapplications.models import LoanApplication
 from guarantors.models import GuarantorProfile
+from loanapplications.utils import compute_loan_coverage
 
 
 class GuaranteeRequestSerializer(serializers.ModelSerializer):
@@ -41,7 +42,6 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
         guarantor = data["guarantor"]
         amount = data["guaranteed_amount"]
 
-        # 1. Own application
         if loan_app.member != member:
             raise serializers.ValidationError(
                 {
@@ -49,7 +49,6 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
                 }
             )
 
-        # 2. Not final state
         FINAL_STATES = ["Submitted", "Approved", "Disbursed", "Declined", "Cancelled"]
         if loan_app.status in FINAL_STATES:
             raise serializers.ValidationError(
@@ -58,27 +57,23 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
                 }
             )
 
-        # 3. Use method & stored field
-        current_committed = guarantor.committed_amount()
-        max_allowed = guarantor.max_guarantee_amount
+        # Use real available capacity
+        available = guarantor.available_capacity()
+        current_committed = guarantor.committed_guarantee_amount
 
         if self.instance:
             current_committed -= self.instance.guaranteed_amount
 
-        if current_committed + amount > max_allowed:
-            available = max_allowed - current_committed
-            print(available)
+        if current_committed + amount > guarantor.max_guarantee_amount:
             raise serializers.ValidationError(
                 {
                     "guaranteed_amount": (
-                        f"Guarantor can only guarantee up to {max_allowed}. "
-                        f"Currently committed: {current_committed}. "
-                        f"Available: {available}."
+                        f"Guarantor only has {available} available. "
+                        f"Currently committed: {current_committed}."
                     )
                 }
             )
 
-        # 4. No duplicate
         if (
             GuaranteeRequest.objects.filter(
                 loan_application=loan_app, guarantor=guarantor
@@ -92,12 +87,14 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
                 }
             )
 
-        # SELF-GUARANTEE
+        # SELF-GUARANTEE: use application-level available
         if guarantor.member == member:
-            available = loan_app.available_self_guarantee
-            if data["guaranteed_amount"] > available:
+            coverage = compute_loan_coverage(loan_app)
+            if amount > coverage["available_self_guarantee"]:
                 raise serializers.ValidationError(
-                    {"guaranteed_amount": f"Self-guarantee available: {available}"}
+                    {
+                        "guaranteed_amount": f"Self-guarantee limited to {coverage['available_self_guarantee']}"
+                    }
                 )
 
         return data

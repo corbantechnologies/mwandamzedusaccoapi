@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from dateutil.relativedelta import relativedelta
 from datetime import timedelta
+from django.db import models
 
 from loanapplications.models import LoanApplication
 from loanapplications.serializers import (
@@ -40,10 +41,6 @@ class LoanApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class SubmitLoanApplicationView(generics.GenericAPIView):
-    """
-    Submits a loan application if it's in 'Ready for Submission' state.
-    """
-
     queryset = LoanApplication.objects.all()
     serializer_class = LoanApplicationSerializer
     permission_classes = [IsAuthenticated]
@@ -52,64 +49,78 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
     def post(self, request, reference):
         application = self.get_object()
 
-        # Only owner can submit
         if application.member != request.user:
             return Response(
                 {"detail": "You can only submit your own applications."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Must be Ready for Submission
-        if (
-            application.status != "Ready for Submission"
-            and application.status != "Submitted"
-        ):
+        if application.status not in ["Ready for Submission", "Submitted"]:
             return Response(
                 {"detail": "Application is not ready for submission."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Prevent double submission
         if application.status == "Submitted":
             return Response(
                 {"detail": "Application already submitted."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Compute loan coverage
         coverage = compute_loan_coverage(application)
 
-        # Submit
-        application.status = "Submitted"
-        application.save(update_fields=["status"])
+        with transaction.atomic():
+            application.status = "Submitted"
+            application.save(update_fields=["status"])
 
-        # AUTO-CREATE SELF-GUARANTEE IF FULLY SELF COVERED
-        if coverage["is_fully_covered"] and coverage["total_guaranteed_by_others"] == 0:
-            try:
-                guarantor_profile = GuarantorProfile.objects.get(
-                    member=application.member
-                )
-                GuaranteeRequest.objects.create(
-                    member=application.member,
-                    loan_application=application,
-                    guarantor=guarantor_profile,
-                    guaranteed_amount=application.requested_amount,
-                    status="Accepted",
-                )
-                # update self_guaranteed_amount
-                application.self_guaranteed_amount = application.requested_amount
-                application.save(update_fields=["self_guaranteed_amount"])
+            # AUTO SELF-GUARANTEE
+            if (
+                coverage["is_fully_covered"]
+                and coverage["total_guaranteed_by_others"] == 0
+            ):
+                try:
+                    profile = GuarantorProfile.objects.select_for_update().get(
+                        member=application.member
+                    )
 
-                # # update guarantor profile
-                # guarantor_profile.max_guarantee_amount -= application.requested_amount
-                # guarantor_profile.save(update_fields=["max_guarantee_amount"])
-            except GuarantorProfile.DoesNotExist:
-                return Response(
-                    {
-                        "detail": "Unable to create self-guarantee. Please add guarantor profile."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                    # Check & reserve capacity
+                    required = application.requested_amount
+                    if (
+                        profile.committed_guarantee_amount + required
+                        > profile.max_guarantee_amount
+                    ):
+                        raise ValueError("Insufficient guarantee capacity")
+
+                    # RESERVE
+                    profile.committed_guarantee_amount += required
+                    profile.save(update_fields=["committed_guarantee_amount"])
+
+                    # Create accepted self-guarantee
+                    GuaranteeRequest.objects.create(
+                        member=application.member,
+                        loan_application=application,
+                        guarantor=profile,
+                        guaranteed_amount=required,
+                        status="Accepted",
+                    )
+
+                    application.self_guaranteed_amount = required
+                    application.save(update_fields=["self_guaranteed_amount"])
+
+                except GuarantorProfile.DoesNotExist:
+                    application.status = "In Progress"
+                    application.save(update_fields=["status"])
+                    return Response(
+                        {"detail": "Guarantor profile required for self-guarantee."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                except ValueError as e:
+                    application.status = "In Progress"
+                    application.save(update_fields=["status"])
+                    return Response(
+                        {"detail": str(e)},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
         serializer = self.get_serializer(application)
         return Response(
@@ -121,30 +132,17 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
         )
 
 
-"""
-SACCO Admin Views
-"""
-
-
 class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
-    """
-    GET  /api/v1/loanapplications/<reference>/status/  → Admin views any application
-    PATCH /api/v1/loanapplications/<reference>/status/ → Approve/Decline (only if Submitted)
-    """
-
     queryset = LoanApplication.objects.all()
     permission_classes = [IsAuthenticated, IsSystemAdminOrReadOnly]
     lookup_field = "reference"
 
-    # Use different serializers for GET vs PATCH
     def get_serializer_class(self):
-        if self.request.method == "GET":
-            return LoanApplicationSerializer
-        return LoanStatusUpdateSerializer
-
-    def get_queryset(self):
-        # Admin can see ALL applications
-        return super().get_queryset()
+        return (
+            LoanApplicationSerializer
+            if self.request.method == "GET"
+            else LoanStatusUpdateSerializer
+        )
 
     def perform_update(self, serializer):
         instance = serializer.instance
@@ -165,14 +163,12 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                 }
             )
 
-        # Calculate end date
         end_date = instance.start_date
         if instance.repayment_frequency == "monthly":
             end_date += relativedelta(months=instance.term_months)
         elif instance.repayment_frequency == "weekly":
             end_date += timedelta(weeks=instance.term_months * 4.345)
 
-        # --- Auto-create LoanAccount on Approval ---
         if new_status == "Approved":
             with transaction.atomic():
                 loan_account = LoanAccount.objects.create(
@@ -190,19 +186,27 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                     end_date=end_date,
                 )
                 serializer.save(status=new_status)
-
                 instance.loan_account = loan_account
                 self.loan_account = loan_account
-        else:
+
+        else:  # Declined
             with transaction.atomic():
-                # 1. Reset self_guaranteed_amount
+                # REVERT SELF-GUARANTEE RESERVATION
                 if instance.self_guaranteed_amount > 0:
+                    try:
+                        profile = instance.member.guarantor_profile
+                        profile.committed_guarantee_amount = (
+                            models.F("committed_guarantee_amount")
+                            - instance.self_guaranteed_amount
+                        )
+                        profile.save(update_fields=["committed_guarantee_amount"])
+                    except GuarantorProfile.DoesNotExist:
+                        pass
+
                     instance.self_guaranteed_amount = 0
                     instance.save(update_fields=["self_guaranteed_amount"])
 
-                instance.status = "Declined"
-                instance.save(update_fields=["status"])
-                serializer.save(status=new_status)
+                serializer.save(status="Declined")
 
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
@@ -212,11 +216,7 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
             "detail": f"Application {instance.status.lower()}.",
             "application": LoanApplicationSerializer(instance).data,
         }
-
         if hasattr(self, "loan_account") and self.loan_account:
             data["loan_account"] = LoanAccountSerializer(self.loan_account).data
 
-        return Response(
-            data,
-            status=status.HTTP_200_OK,
-        )
+        return Response(data, status=status.HTTP_200_OK)

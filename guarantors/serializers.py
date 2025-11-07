@@ -19,7 +19,7 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
 
     active_guarantees_count = serializers.SerializerMethodField()
     committed_amount = serializers.SerializerMethodField()
-    max_guarantee_amount = serializers.SerializerMethodField()
+    available_amount = serializers.SerializerMethodField()
     has_reached_limit = serializers.SerializerMethodField()
 
     class Meta:
@@ -32,7 +32,7 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
             "max_active_guarantees",
             "active_guarantees_count",
             "committed_amount",
-            "max_guarantee_amount",
+            "available_amount",
             "has_reached_limit",
             "reference",
             "created_at",
@@ -74,35 +74,30 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         return data
 
     def get_active_guarantees_count(self, obj):
-        return GuaranteeRequest.objects.filter(guarantor=obj, status="Accepted").count()
+        return obj.active_guarantees_count()
 
     def get_committed_amount(self, obj):
-        return obj.committed_amount()  # ← method
+        return float(obj.committed_guarantee_amount)
 
-    def get_max_guarantee_amount(self, obj):
-        total_savings = SavingsAccount.objects.filter(member=obj.member)\
-            .aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
-        committed = obj.committed_amount()
-        available = total_savings - committed
-        return float(available)
+    def get_available_amount(self, obj):
+        return float(obj.available_capacity())
 
     def get_has_reached_limit(self, obj):
-        count = self.get_active_guarantees_count(obj)
-        max_limit = int(obj.max_active_guarantees)
-        return count >= max_limit
+        count = obj.active_guarantees_count()
+        return count >= obj.max_active_guarantees
 
     def create(self, validated_data):
         member_no = validated_data.pop("member_no")
         member = User.objects.get(member_no=member_no)
 
-        # Calculate max_guarantee_amount from savings
-        total_savings = SavingsAccount.objects.filter(member=member)\
-            .aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
+        total_savings = SavingsAccount.objects.filter(member=member).aggregate(
+            total=models.Sum("balance")
+        )["total"] or Decimal("0")
 
-        # Create with max_guarantee_amount
         profile = GuarantorProfile.objects.create(
             member=member,
-            max_guarantee_amount=total_savings,  # ← SET HERE
-            **validated_data
+            max_guarantee_amount=total_savings,
+            committed_guarantee_amount=Decimal("0"),
+            **validated_data,
         )
         return profile
