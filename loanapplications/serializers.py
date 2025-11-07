@@ -29,6 +29,14 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     start_date = serializers.DateField(default=date.today)
     can_submit = serializers.SerializerMethodField(read_only=True)
     projection = serializers.SerializerMethodField()
+    # computed fields
+    total_savings = serializers.SerializerMethodField()
+    available_self_guarantee = serializers.SerializerMethodField()
+    total_guaranteed_by_others = serializers.SerializerMethodField()
+    effective_coverage = serializers.SerializerMethodField()
+    remaining_to_cover = serializers.SerializerMethodField()
+    is_fully_covered = serializers.SerializerMethodField()
+    can_submit = serializers.SerializerMethodField()
 
     class Meta:
         model = LoanApplication
@@ -43,9 +51,17 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "start_date",
             "status",
             "can_submit",
-            "projection",
+            "self_guaranteed_amount",
+            "total_savings",
+            "available_self_guarantee",
+            "total_guaranteed_by_others",
+            "effective_coverage",
+            "remaining_to_cover",
+            "is_fully_covered",
             "created_at",
+            "updated_at",
             "reference",
+            "projection",
         )
         read_only_fields = (
             "status",
@@ -54,6 +70,48 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "created_at",
             "reference",
         )
+
+    # ---- Computed Methods ----
+
+    def get_total_savings(self, obj):
+        total = SavingsAccount.objects.filter(member=obj.member).aggregate(
+            t=models.Sum("balance")
+        )["t"]
+        return float(total or 0)
+
+    def get_committed_self_guarantee(self, obj):
+        # Sum of self-guaranteed amounts from active loans
+        total = LoanApplication.objects.filter(
+            member=obj.member,
+            loan_account__status__in=["Active", "Funded"],
+            self_guaranteed_amount__gt=0,
+        ).aggregate(t=models.Sum("self_guaranteed_amount"))["t"]
+        return float(total or 0)
+
+    def get_available_self_guarantee(self, obj):
+        savings = self.get_total_savings(obj)
+        committed = self.get_committed_self_guarantee(obj)
+        return float(max(Decimal("0"), Decimal(savings) - Decimal(committed)))
+
+    def get_total_guaranteed_by_others(self, obj):
+        total = obj.guarantors.filter(status="Accepted").aggregate(
+            t=models.Sum("guaranteed_amount")
+        )["t"]
+        return float(total or 0)
+
+    def get_effective_coverage(self, obj):
+        return self.get_available_self_guarantee(
+            obj
+        ) + self.get_total_guaranteed_by_others(obj)
+
+    def get_remaining_to_cover(self, obj):
+        coverage = self.get_effective_coverage(obj)
+        return float(
+            max(Decimal("0"), Decimal(obj.requested_amount) - Decimal(coverage))
+        )
+
+    def get_is_fully_covered(self, obj):
+        return self.get_remaining_to_cover(obj) <= 0
 
     def get_projection(self, obj):
         return obj.projection_snapshot

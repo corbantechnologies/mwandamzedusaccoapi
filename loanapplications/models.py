@@ -1,8 +1,9 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from datetime import date
+
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from loanproducts.models import LoanProduct
-from datetime import date
 
 User = get_user_model()
 
@@ -49,6 +50,9 @@ class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
         default=date.today, help_text="Loan disbursement date (used for projection)"
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
+    self_guaranteed_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, default=0
+    )
     projection_snapshot = models.JSONField(
         null=True, blank=True, help_text="Full repayment projection"
     )

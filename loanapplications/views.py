@@ -145,6 +145,7 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                 loan_account = LoanAccount.objects.create(
                     member=instance.member,
                     product=instance.product,
+                    application=instance,
                     principal=instance.requested_amount,
                     outstanding_balance=instance.projection_snapshot["total_repayment"],
                     start_date=instance.start_date,

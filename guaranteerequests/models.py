@@ -46,4 +46,4 @@ class GuaranteeRequest(UniversalIdModel, TimeStampedModel, ReferenceModel):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.member_no} - {self.guaranteed_amount}"
+        return f"{self.member.member_no} - {self.guaranteed_amount}"

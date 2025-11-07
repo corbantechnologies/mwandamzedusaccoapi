@@ -82,7 +82,7 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
             GuaranteeRequest.objects.filter(
                 loan_application=loan_app, guarantor=guarantor
             )
-            .exclude(pk=self.instance.pk if self.instance else None)
+            .exclude(reference=self.instance.reference if self.instance else None)
             .exists()
         ):
             raise serializers.ValidationError(
@@ -91,8 +91,43 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
                 }
             )
 
+        # SELF-GUARANTEE
+        if guarantor.member == member:
+            available = loan_app.available_self_guarantee
+            if data["guaranteed_amount"] > available:
+                raise serializers.ValidationError(
+                    {"guaranteed_amount": f"Self-guarantee available: {available}"}
+                )
+
         return data
 
     def create(self, validated_data):
         validated_data["member"] = self.context["request"].user
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+
+        # AUTO-ACCEPT SELF-GUARANTEE
+        if instance.guarantor.member == instance.member:
+            instance.status = "Approved"
+            instance.save(update_fields=["status"])
+
+            # update loan
+            loan = instance.loan_application
+            loan.self_guaranteed_amount = instance.guaranteed_amount
+            loan.save(update_fields=["self_guaranteed_amount"])
+
+            # Auto-ready if fully covered
+            if loan.is_fully_covered:
+                loan.status = "Ready for Submission"
+                loan.save(update_fields=["status"])
+
+        return instance
+
+
+class GuaranteeApprovalDeclineSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=GuaranteeRequest.STATUS_CHOICES, required=True
+    )
+
+    class Meta:
+        model = GuaranteeRequest
+        fields = ("status",)

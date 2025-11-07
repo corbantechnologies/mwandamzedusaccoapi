@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from loanproducts.models import LoanProduct
 from loanaccounts.utils import generate_loan_account_number
+from loanapplications.models import LoanApplication
 
 User = get_user_model()
 
@@ -23,6 +24,13 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
 
     member = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="loan_accounts"
+    )
+    application = models.OneToOneField(
+        LoanApplication,
+        on_delete=models.CASCADE,
+        related_name="loan_account",
+        null=True,
+        blank=True,
     )
     product = models.ForeignKey(
         LoanProduct, on_delete=models.CASCADE, related_name="loans"
