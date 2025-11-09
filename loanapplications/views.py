@@ -192,7 +192,7 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
 
         else:  # Declined
             with transaction.atomic():
-                # 1. Revert self-guarantee
+                # Revert self-guarantee
                 if instance.self_guaranteed_amount > 0:
                     try:
                         profile = instance.member.guarantor_profile
@@ -203,7 +203,7 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
                     instance.self_guaranteed_amount = 0
                     instance.save(update_fields=["self_guaranteed_amount"])
 
-                # 2. Revert ALL external accepted guarantees
+                # Revert external guarantees
                 for guarantee in instance.guarantors.filter(status="Accepted"):
                     profile = guarantee.guarantor
                     profile.committed_guarantee_amount = F('committed_guarantee_amount') - guarantee.guaranteed_amount

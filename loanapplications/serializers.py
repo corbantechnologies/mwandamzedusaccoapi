@@ -1,4 +1,3 @@
-# loanapplications/serializers.py
 from rest_framework import serializers
 from decimal import Decimal
 from datetime import date
@@ -15,6 +14,7 @@ from mwandamzeduapi.settings import (
 )
 from loanaccounts.models import LoanAccount
 from savings.models import SavingsAccount
+from loanapplications.utils import compute_loan_coverage 
 
 
 class LoanApplicationSerializer(serializers.ModelSerializer):
@@ -29,14 +29,14 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     start_date = serializers.DateField(default=date.today)
     can_submit = serializers.SerializerMethodField(read_only=True)
     projection = serializers.SerializerMethodField()
-    # computed fields
+
+    # Computed fields
     total_savings = serializers.SerializerMethodField()
     available_self_guarantee = serializers.SerializerMethodField()
     total_guaranteed_by_others = serializers.SerializerMethodField()
     effective_coverage = serializers.SerializerMethodField()
     remaining_to_cover = serializers.SerializerMethodField()
     is_fully_covered = serializers.SerializerMethodField()
-    can_submit = serializers.SerializerMethodField()
 
     class Meta:
         model = LoanApplication
@@ -71,8 +71,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "reference",
         )
 
-    # ---- Computed Methods ----
-
+    # --- Computed Methods ---
     def get_total_savings(self, obj):
         total = SavingsAccount.objects.filter(member=obj.member).aggregate(
             t=models.Sum("balance")
@@ -80,7 +79,6 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         return float(total or 0)
 
     def get_committed_self_guarantee(self, obj):
-        # Sum of self-guaranteed amounts from active loans
         total = LoanApplication.objects.filter(
             member=obj.member,
             loan_account__status__in=["Active", "Funded"],
@@ -117,11 +115,11 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         return obj.projection_snapshot
 
     def get_can_submit(self, obj):
-        return self._can_submit_without_guarantors(obj)
+        coverage = compute_loan_coverage(obj)
+        return coverage["is_fully_covered"]
 
     # --- Helpers ---
     def _is_first_loan(self, member):
-        """True if member has no LoanAccount → never had an approved loan"""
         return not LoanAccount.objects.filter(member=member).exists()
 
     def _total_savings(self, member):
@@ -130,40 +128,16 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         )["total"]
         return total or Decimal("0")
 
-    def _can_submit_without_guarantors(self, instance):
-        if not instance.member or instance.requested_amount is None:
-            return False
-
-        member = instance.member
-        amount = instance.requested_amount
-        savings = self._total_savings(member)
-
-        # Rule 3: Savings ≥ Loan → can submit
-        if savings >= amount:
-            return True
-
-        # Rule 1 & 2: First-time borrower
-        if self._is_first_loan(member):
-            months = int(FIRST_LOAN_MIN_MEMBER_MONTHS)
-            required_date = timezone.now() - relativedelta(months=months)
-            if member.created_at <= required_date:
-                max_allowed = savings * Decimal(FIRST_LOAN_MAX_SAVINGS_PERCENT) / 100
-                return amount <= max_allowed
-
-        return False
-
     # --- Validation ---
     def validate(self, data):
         request = self.context["request"]
         member = request.user
 
-        # For CREATE: requested_amount required
         if not self.instance and "requested_amount" not in data:
             raise serializers.ValidationError(
                 {"requested_amount": "This field is required."}
             )
 
-        # Use instance value if not in data (PATCH)
         requested_amount = data.get("requested_amount")
         if requested_amount is None and self.instance:
             requested_amount = self.instance.requested_amount
@@ -172,7 +146,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
                 {"requested_amount": "This field is required."}
             )
 
-        # Build temp instance with fallbacks
+        # Build temp instance
         temp_instance = LoanApplication(
             member=member,
             requested_amount=requested_amount,
@@ -189,7 +163,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             ),
         )
 
-        # Rule 1 & 2: First-time borrower (only if amount changed or create)
+        # First-time borrower rules
         if self._is_first_loan(member) and (
             "requested_amount" in data or not self.instance
         ):
@@ -213,8 +187,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
                     }
                 )
 
-        # Set status
-        if self._can_submit_without_guarantors(temp_instance):
+        # SET STATUS BASED ON COVERAGE
+        coverage = compute_loan_coverage(temp_instance)
+        if coverage["is_fully_covered"]:
             data["status"] = "Ready for Submission"
         else:
             data["status"] = "In Progress"
@@ -264,7 +239,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
     # --- Create ---
     def create(self, validated_data):
-        validated_data.pop("member", None)  # Safety
+        validated_data.pop("member", None)
         projection = self._generate_projection(validated_data)
         instance = LoanApplication.objects.create(
             member=self.context["request"].user,
@@ -278,33 +253,24 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     # --- Update ---
     def update(self, instance, validated_data):
         FINAL_STATES = ["Submitted", "Approved", "Disbursed", "Declined", "Cancelled"]
-
-        # Double-check: block in update too
         if instance.status in FINAL_STATES:
             raise serializers.ValidationError(
                 {"detail": f"Cannot update application in '{instance.status}' state."}
             )
 
-        # Recalculate projection
         if self._should_recalculate_projection(validated_data, instance):
             projection = self._generate_projection(validated_data, instance)
             validated_data["projection_snapshot"] = projection
             validated_data["repayment_amount"] = projection["total_repayment"]
             validated_data["total_interest"] = projection["total_interest"]
 
-        # Re-evaluate readiness
+        # Re-evaluate status using coverage
         requested_amount = validated_data.get(
             "requested_amount", instance.requested_amount
         )
         temp_instance = LoanApplication(
             member=instance.member,
             requested_amount=requested_amount,
-            repayment_amount=validated_data.get(
-                "repayment_amount", instance.repayment_amount
-            ),
-            total_interest=validated_data.get(
-                "total_interest", instance.total_interest
-            ),
             product=validated_data.get("product", instance.product),
             term_months=validated_data.get("term_months", instance.term_months),
             repayment_frequency=validated_data.get(
@@ -313,7 +279,8 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             start_date=validated_data.get("start_date", instance.start_date),
         )
 
-        if self._can_submit_without_guarantors(temp_instance):
+        coverage = compute_loan_coverage(temp_instance)
+        if coverage["is_fully_covered"]:
             validated_data["status"] = "Ready for Submission"
         else:
             validated_data["status"] = "In Progress"
@@ -326,10 +293,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
 
 class LoanStatusUpdateSerializer(serializers.ModelSerializer):
     status = serializers.ChoiceField(
-        choices=LoanApplication.STATUS_CHOICES, required=False
+        choices=LoanApplication.STATUS_CHOICES, required=True
     )
 
     class Meta:
         model = LoanApplication
         fields = ("status",)
-        extra_kwargs = {"status": {"required": True}}
