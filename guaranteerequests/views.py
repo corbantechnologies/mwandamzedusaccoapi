@@ -1,8 +1,9 @@
-from rest_framework import generics, serializers, status
+# guaranteerequests/views.py
+from rest_framework import generics, status, serializers
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Q, F
-from django.db import transaction
 from rest_framework.response import Response
+from django.db import transaction
+from django.db.models import Q, F
 
 from guaranteerequests.models import GuaranteeRequest
 from guaranteerequests.serializers import (
@@ -14,7 +15,8 @@ from loanapplications.utils import compute_loan_coverage
 
 class GuaranteeRequestListCreateView(generics.ListCreateAPIView):
     """
-    - Member makes a request
+    Member creates a guarantee request
+    Both member and guarantor can list their requests
     """
 
     queryset = GuaranteeRequest.objects.all()
@@ -25,8 +27,6 @@ class GuaranteeRequestListCreateView(generics.ListCreateAPIView):
         serializer.save(member=self.request.user)
 
     def get_queryset(self):
-        # both the member and guarantor can see the request
-        # guarantors should see requests made to them
         user = self.request.user
         return (
             super()
@@ -42,33 +42,16 @@ class GuaranteeRequestRetrieveView(generics.RetrieveAPIView):
     lookup_field = "reference"
 
     def get_queryset(self):
+        user = self.request.user
         return GuaranteeRequest.objects.filter(
-            Q(member=self.request.user) | Q(guarantor__member=self.request.user)
+            Q(member=user) | Q(guarantor__member=user)
         )
 
 
 class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
-    serializer_class = GuaranteeRequestSerializer
-    permission_classes = [IsAuthenticated]
-    lookup_field = "reference"
-
-    def get_queryset(self):
-        return GuaranteeRequest.objects.filter(guarantor__member=self.request.user)
-
-    def get_serializer(self, *args, **kwargs):
-        kwargs["partial"] = True
-        serializer = super().get_serializer(*args, **kwargs)
-        # Only allow 'status'
-        for field in serializer.fields:
-            if field != "status":
-                serializer.fields[field].read_only = True
-        return serializer
-
-
-class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
     """
-    PATCH /api/v1/guaranteerequests/<reference>/status/
-    Only the guarantor can accept or decline.
+    PATCH /guaranteerequests/<reference>/status/
+    Only guarantor can accept/decline
     """
 
     serializer_class = GuaranteeApprovalDeclineSerializer
@@ -79,29 +62,21 @@ class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
         return GuaranteeRequest.objects.filter(guarantor__member=self.request.user)
 
     def perform_update(self, serializer):
-        request = self.request
         new_status = serializer.validated_data["status"]
-
         if new_status not in ["Accepted", "Declined"]:
             raise serializers.ValidationError(
-                {"status": "Status must be 'Accepted' or 'Declined'."}
+                {"status": "Must be 'Accepted' or 'Declined'."}
             )
 
         instance = self.get_object()
-
-        # Only Pending requests can be updated
         if instance.status != "Pending":
-            raise serializers.ValidationError(
-                {"status": f"Cannot change status from '{instance.status}'."}
-            )
+            raise serializers.ValidationError({"status": "Request already processed."})
 
         loan_app = instance.loan_application
-
-        # Loan must not be in final state
         FINAL_STATES = ["Submitted", "Approved", "Disbursed", "Declined", "Cancelled"]
         if loan_app.status in FINAL_STATES:
             raise serializers.ValidationError(
-                {"status": "Cannot modify guarantees on a finalized loan application."}
+                {"status": "Loan application is finalized."}
             )
 
         with transaction.atomic():
@@ -109,24 +84,17 @@ class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
             instance.save(update_fields=["status"])
 
             if new_status == "Accepted":
-                # RESERVE in guarantor's profile
                 profile = instance.guarantor
                 profile.committed_guarantee_amount = (
                     F("committed_guarantee_amount") + instance.guaranteed_amount
                 )
                 profile.save(update_fields=["committed_guarantee_amount"])
 
-                # Auto-ready if now fully covered
                 coverage = compute_loan_coverage(loan_app)
                 if coverage["is_fully_covered"]:
                     loan_app.status = "Ready for Submission"
-                    loan_app.can_submit = True
                     loan_app.save(update_fields=["status"])
-                    loan_app.save(update_fields=["can_submit"])
 
-            # Declined → do nothing (no reservation)
-
-        # Return full request with updated status
         return Response(
             GuaranteeRequestSerializer(
                 instance, context=self.get_serializer_context()
