@@ -3,7 +3,6 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from mwandamzeduapi.settings import MAX_GUARANTEES
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from savings.models import SavingsAccount
 from guaranteerequests.models import GuaranteeRequest
