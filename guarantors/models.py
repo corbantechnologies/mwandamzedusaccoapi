@@ -3,9 +3,9 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+from mwandamzeduapi.settings import MAX_GUARANTEES
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from savings.models import SavingsAccount
-from guaranteerequests.models import GuaranteeRequest
 
 User = get_user_model()
 
@@ -35,7 +35,8 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
         return f"{self.member.member_no} – Eligible: {self.is_eligible}"
 
     def save(self, *args, **kwargs):
-        if self.pk:
+        # Always sync max_guarantee_amount with current savings
+        if self.pk:  # Only for existing instances
             total_savings = SavingsAccount.objects.filter(member=self.member).aggregate(
                 total=models.Sum("balance")
             )["total"] or Decimal("0")
@@ -52,6 +53,8 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
         )
 
     def active_guarantees_count(self):
+        from guaranteerequests.models import GuaranteeRequest
+
         return GuaranteeRequest.objects.filter(
             guarantor=self,
             status="Accepted",

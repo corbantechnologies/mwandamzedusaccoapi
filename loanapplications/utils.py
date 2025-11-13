@@ -1,4 +1,3 @@
-# loanapplications/utils.py
 from decimal import Decimal
 from django.db import models
 from savings.models import SavingsAccount
