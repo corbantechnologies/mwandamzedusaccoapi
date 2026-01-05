@@ -74,3 +74,56 @@ def send_account_activated_email(user):
     except Exception as e:
         logger.error(f"Error sending email to {user.email}: {str(e)}")
         return None
+
+
+def send_forgot_password_email(user, code):
+    """
+    A function to send a forgot password email
+    """
+    try:
+        email_body = render_to_string(
+            "forgot_password.html",
+            {
+                "user": user,
+                "code": code,
+                "current_year": datetime.now().year,
+            },
+        )
+        params = {
+            "from": "SACCO <security@corbantechnologies.org>",
+            "to": [user.email],
+            "subject": "Reset Your Mwanda Mzedu SACCO Password",
+            "html": email_body,
+        }
+        response = resend.Emails.send(params)
+        logger.info(f"Forgot password email sent to {user.email} with response: {response}")
+        return response
+    except Exception as e:
+        logger.error(f"Error sending forgot password email to {user.email}: {str(e)}")
+        return None
+
+
+def send_password_reset_success_email(user):
+    """
+    A function to send a password reset success email
+    """
+    try:
+        email_body = render_to_string(
+            "password_reset_success.html",
+            {
+                "user": user,
+                "current_year": datetime.now().year,
+            },
+        )
+        params = {
+            "from": "SACCO <security@corbantechnologies.org>",
+            "to": [user.email],
+            "subject": "Password Reset Successful - Mwanda Mzedu SACCO",
+            "html": email_body,
+        }
+        response = resend.Emails.send(params)
+        logger.info(f"Password reset success email sent to {user.email} with response: {response}")
+        return response
+    except Exception as e:
+        logger.error(f"Error sending password reset success email to {user.email}: {str(e)}")
+        return None

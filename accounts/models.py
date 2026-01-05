@@ -60,7 +60,7 @@ class User(
     first_name = models.CharField(max_length=255)
     middle_name = models.CharField(max_length=255, blank=True, null=True)
     last_name = models.CharField(max_length=255)
-    email = models.EmailField(blank=True, null=True)
+    email = models.EmailField(unique=True)
     gender = models.CharField(max_length=255)
     dob = models.DateField(blank=True, null=True)
     avatar = CloudinaryField("mzedu_avatars", blank=True, null=True)
@@ -84,11 +84,16 @@ class User(
     is_sacco_admin = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    # Password Reset
+    password_reset_code = models.CharField(max_length=6, blank=True, null=True)
+    password_reset_code_created_at = models.DateTimeField(blank=True, null=True)
+
     USERNAME_FIELD = "member_no"
     REQUIRED_FIELDS = [
         "first_name",
         "last_name",
         "password",
+        "email",
         "gender",
     ]
 
