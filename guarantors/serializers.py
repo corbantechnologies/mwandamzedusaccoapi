@@ -7,7 +7,6 @@ from django.utils import timezone
 
 from mwandamzeduapi.settings import MEMBER_PERIOD
 from guarantors.models import GuarantorProfile
-from guaranteerequests.models import GuaranteeRequest
 from savings.models import SavingsAccount
 
 User = get_user_model()

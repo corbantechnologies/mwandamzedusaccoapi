@@ -8,6 +8,8 @@ from accounts.views import (
     ActivateAccountView,
     PasswordChangeView,
     MemberCreatedByAdminView,
+    ForgotPasswordView,
+    ResetPasswordView,
 )
 
 app_name = "accounts"
@@ -25,6 +27,8 @@ urlpatterns = [
     ),
     # Password Reset
     path("password/change/", PasswordChangeView.as_view(), name="password-change"),
+    path("password/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
+    path("password/reset-password/", ResetPasswordView.as_view(), name="reset-password"),
     # Account activation
     path(
         "password/activate-account/",
