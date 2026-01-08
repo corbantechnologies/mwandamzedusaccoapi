@@ -40,7 +40,7 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
     )
     principal = models.DecimalField(max_digits=15, decimal_places=2)
     outstanding_balance = models.DecimalField(max_digits=15, decimal_places=2)
-    start_date = models.DateField()
+    start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     last_interest_calulation = models.DateField(null=True, blank=True)
     status = models.CharField(choices=STATUS_CHOICES, default="Active", max_length=20)
@@ -56,6 +56,14 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
         verbose_name = "Loan Account"
         verbose_name_plural = "Loan Accounts"
         ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        if not self.start_date:
+            self.start_date = timezone.now().date()
+        
+        # TODO: Calculate outstanding balance
+        self.outstanding_balance = self.principal
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.member} - {self.product}"
