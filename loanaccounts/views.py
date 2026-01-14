@@ -20,3 +20,10 @@ class LoanAccountDetailView(generics.RetrieveUpdateAPIView):
         IsSystemAdminOrReadOnly,
     ]
     lookup_field = "reference"
+
+class LoanAccountCreatedByAdminView(generics.ListCreateAPIView):
+    queryset = LoanAccount.objects.all()
+    serializer_class = LoanAccountSerializer
+    permission_classes = [
+        IsSystemAdminOrReadOnly,
+    ]

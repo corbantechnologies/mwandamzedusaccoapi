@@ -1,3 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
+from transactions.models import DownloadLog, BulkTransactionLog
+
+admin.site.register(DownloadLog)
+admin.site.register(BulkTransactionLog)

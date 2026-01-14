@@ -183,7 +183,8 @@ class PasswordChangeSerializer(serializers.Serializer):
         user.set_password(password)
         user.save()
         # TODO: clear session
-        update_session_auth_hash(self.context["request"], user)  # Maintain session
+        self.context["request"].session.flush()
+        # update_session_auth_hash(self.context["request"], user)  # Maintain session
         return user
 
 
