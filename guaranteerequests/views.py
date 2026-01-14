@@ -80,16 +80,35 @@ class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
             )
 
         with transaction.atomic():
-            instance.status = new_status
-            instance.save(update_fields=["status"])
-
             if new_status == "Accepted":
                 profile = instance.guarantor
+
+                # Check for amount adjustment
+                adjusted_amount = serializer.validated_data.get("guaranteed_amount")
+                amount_to_commit = instance.guaranteed_amount
+
+                if adjusted_amount:
+                    amount_to_commit = adjusted_amount
+                    instance.guaranteed_amount = amount_to_commit
+                    # note: we save instance later
+
+                # Validate capacity
+                if profile.available_capacity() < amount_to_commit:
+                    raise serializers.ValidationError(
+                        {
+                            "guaranteed_amount": f"Insufficient capacity. Available: {profile.available_capacity()}"
+                        }
+                    )
+
                 profile.committed_guarantee_amount = (
-                    F("committed_guarantee_amount") + instance.guaranteed_amount
+                    F("committed_guarantee_amount") + amount_to_commit
                 )
                 profile.save(update_fields=["committed_guarantee_amount"])
 
+            instance.status = new_status
+            instance.save(update_fields=["status", "guaranteed_amount"])
+
+            if new_status == "Accepted":
                 coverage = compute_loan_coverage(loan_app)
                 if coverage["is_fully_covered"]:
                     loan_app.status = "Ready for Submission"

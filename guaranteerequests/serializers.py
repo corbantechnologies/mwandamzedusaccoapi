@@ -124,7 +124,10 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
 
 class GuaranteeApprovalDeclineSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=["Accepted", "Declined"], required=True)
+    guaranteed_amount = serializers.DecimalField(
+        max_digits=15, decimal_places=2, min_value=Decimal("0.01"), required=False
+    )
 
     class Meta:
         model = GuaranteeRequest
-        fields = ("status",)
+        fields = ("status", "guaranteed_amount")

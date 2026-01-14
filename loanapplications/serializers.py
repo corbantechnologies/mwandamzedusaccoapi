@@ -14,7 +14,7 @@ from mwandamzeduapi.settings import (
 )
 from loanaccounts.models import LoanAccount
 from savings.models import SavingsAccount
-from loanapplications.utils import compute_loan_coverage 
+from loanapplications.utils import compute_loan_coverage
 
 
 class LoanApplicationSerializer(serializers.ModelSerializer):
@@ -58,6 +58,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "effective_coverage",
             "remaining_to_cover",
             "is_fully_covered",
+            "amendment_note",
             "created_at",
             "updated_at",
             "reference",
@@ -69,54 +70,36 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "can_submit",
             "created_at",
             "reference",
+            "amendment_note",
         )
 
     # --- Computed Methods ---
     def get_total_savings(self, obj):
-        total = SavingsAccount.objects.filter(member=obj.member).aggregate(
-            t=models.Sum("balance")
-        )["t"]
-        return float(total or 0)
+        return float(compute_loan_coverage(obj)["total_savings"])
 
     def get_committed_self_guarantee(self, obj):
-        total = LoanApplication.objects.filter(
-            member=obj.member,
-            loan_account__status__in=["Active", "Funded"],
-            self_guaranteed_amount__gt=0,
-        ).aggregate(t=models.Sum("self_guaranteed_amount"))["t"]
-        return float(total or 0)
+        return float(compute_loan_coverage(obj)["committed_self_guarantee"])
 
     def get_available_self_guarantee(self, obj):
-        savings = self.get_total_savings(obj)
-        committed = self.get_committed_self_guarantee(obj)
-        return float(max(Decimal("0"), Decimal(savings) - Decimal(committed)))
+        return float(compute_loan_coverage(obj)["available_self_guarantee"])
 
     def get_total_guaranteed_by_others(self, obj):
-        total = obj.guarantors.filter(status="Accepted").aggregate(
-            t=models.Sum("guaranteed_amount")
-        )["t"]
-        return float(total or 0)
+        return float(compute_loan_coverage(obj)["total_guaranteed_by_others"])
 
     def get_effective_coverage(self, obj):
-        return self.get_available_self_guarantee(
-            obj
-        ) + self.get_total_guaranteed_by_others(obj)
+        return float(compute_loan_coverage(obj)["effective_coverage"])
 
     def get_remaining_to_cover(self, obj):
-        coverage = self.get_effective_coverage(obj)
-        return float(
-            max(Decimal("0"), Decimal(obj.requested_amount) - Decimal(coverage))
-        )
+        return float(compute_loan_coverage(obj)["remaining_to_cover"])
 
     def get_is_fully_covered(self, obj):
-        return self.get_remaining_to_cover(obj) <= 0
+        return compute_loan_coverage(obj)["is_fully_covered"]
 
     def get_projection(self, obj):
         return obj.projection_snapshot
 
     def get_can_submit(self, obj):
-        coverage = compute_loan_coverage(obj)
-        return coverage["is_fully_covered"]
+        return compute_loan_coverage(obj)["is_fully_covered"]
 
     # --- Helpers ---
     def _is_first_loan(self, member):
@@ -187,12 +170,8 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
                     }
                 )
 
-        # SET STATUS BASED ON COVERAGE
-        coverage = compute_loan_coverage(temp_instance)
-        if coverage["is_fully_covered"]:
-            data["status"] = "Ready for Submission"
-        else:
-            data["status"] = "In Progress"
+        # SET STATUS
+        data["status"] = "Pending"  # Always start as pending
 
         return data
 
@@ -279,11 +258,8 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             start_date=validated_data.get("start_date", instance.start_date),
         )
 
-        coverage = compute_loan_coverage(temp_instance)
-        if coverage["is_fully_covered"]:
-            validated_data["status"] = "Ready for Submission"
-        else:
-            validated_data["status"] = "In Progress"
+        if "status" in validated_data:
+            instance.status = validated_data["status"]
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)

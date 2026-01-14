@@ -11,6 +11,8 @@ User = get_user_model()
 class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
     STATUS_CHOICES = [
         ("Pending", "Pending"),
+        ("Ready for Amendment", "Ready for Amendment"),
+        ("Amended", "Amended"),
         ("In Progress", "In Progress"),
         ("Ready for Submission", "Ready for Submission"),
         ("Submitted", "Submitted"),
@@ -40,14 +42,14 @@ class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
     repayment_frequency = models.CharField(
         max_length=40, choices=REPAYMENT_FREQUENCY_CHOICES, default="monthly"
     )
+    start_date = models.DateField(
+        default=date.today, help_text="Loan disbursement date (used for projection)"
+    )
     repayment_amount = models.DecimalField(
         max_digits=15, decimal_places=2, null=True, blank=True
     )
     total_interest = models.DecimalField(
         max_digits=15, decimal_places=2, null=True, blank=True
-    )
-    start_date = models.DateField(
-        default=date.today, help_text="Loan disbursement date (used for projection)"
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="Pending")
     self_guaranteed_amount = models.DecimalField(
@@ -56,6 +58,7 @@ class LoanApplication(UniversalIdModel, TimeStampedModel, ReferenceModel):
     projection_snapshot = models.JSONField(
         null=True, blank=True, help_text="Full repayment projection"
     )
+    amendment_note = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = "Loan Application"
