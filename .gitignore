@@ -150,3 +150,5 @@ app.yaml
 *.json
 
 actions.py
+
+*.csv

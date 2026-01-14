@@ -14,14 +14,21 @@ def compute_loan_coverage(application):
         t=models.Sum("balance")
     )["t"] or Decimal("0")
 
-    # Only count self-guarantees from *active* loans
-    committed_self = LoanApplication.objects.filter(
-        member=application.member,
-        loan_account__status__in=["Active", "Funded"],
-        self_guaranteed_amount__gt=0,
-    ).aggregate(t=models.Sum("self_guaranteed_amount"))["t"] or Decimal("0")
+    # Calculate available based on GuarantorProfile logic
+    try:
+        from guarantors.models import GuarantorProfile
 
-    available_self = max(Decimal("0"), total_savings - committed_self)
+        profile = GuarantorProfile.objects.get(member=application.member)
+        # Sync max_guarantee just in case (optional, but good for accuracy)
+        # profile.max_guarantee_amount = total_savings
+        # profile.save()
+
+        # Committed includes guarantees for others AND self-guarantees on other loans
+        committed_total = profile.committed_guarantee_amount
+    except GuarantorProfile.DoesNotExist:
+        committed_total = Decimal("0")
+
+    available_self = max(Decimal("0"), total_savings - committed_total)
 
     total_guaranteed_by_others = application.guarantors.filter(
         status="Accepted"
@@ -35,7 +42,7 @@ def compute_loan_coverage(application):
 
     return {
         "total_savings": total_savings,
-        "committed_self_guarantee": committed_self,
+        "committed_self_guarantee": committed_total,
         "available_self_guarantee": available_self,
         "total_guaranteed_by_others": total_guaranteed_by_others,
         "effective_coverage": effective_coverage,
