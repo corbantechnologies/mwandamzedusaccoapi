@@ -101,13 +101,13 @@ class AccountListDownloadView(generics.ListAPIView):
         # ====== FULL ACCOUNT LIST + BULK UPLOAD COLUMNS ======
         headers = ["Member Name", "Member Number"]
 
-        # Savings: Account + Amount
+        # Savings: Account + Current Balance + Amount
         for st in saving_types:
-            headers += [f"{st} Account", f"{st} Amount"]
+            headers += [f"{st} Account", f"{st} Current Balance", f"{st} Amount"]
 
-        # Ventures: Account + Amount
+        # Ventures: Account + Current Balance + Amount
         for vt in venture_types:
-            headers += [f"{vt} Account", f"{vt} Amount"]
+            headers += [f"{vt} Account", f"{vt} Current Balance", f"{vt} Amount"]
 
         # Optional: Payment Method
         headers += ["Payment Method"]
@@ -126,20 +126,26 @@ class AccountListDownloadView(generics.ListAPIView):
 
             # initialize all to empty
             for st in saving_types:
-                row[f"{st} Account"] = row[f"{st} Amount"] = ""
+                row[f"{st} Account"] = row[f"{st} Amount"] = row[
+                    f"{st} Current Balance"
+                ] = ""
 
             for vt in venture_types:
-                row[f"{vt} Account"] = row[f"{vt} Amount"] = ""
+                row[f"{vt} Account"] = row[f"{vt} Amount"] = row[
+                    f"{vt} Current Balance"
+                ] = ""
 
             # ===== Fill from existing data =====
             # Savings
             for acc_no, acc_type, balance in user["savings_accounts"]:
                 row[f"{acc_type} Account"] = acc_no
+                row[f"{acc_type} Current Balance"] = balance
                 # Amount column stays empty for bulk upload/edit
 
             # Ventures
             for acc_no, acc_type, balance in user["venture_accounts"]:
                 row[f"{acc_type} Account"] = acc_no
+                row[f"{acc_type} Current Balance"] = balance
                 # Amount column stays empty for bulk upload/edit
 
             # write row
