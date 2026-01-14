@@ -84,7 +84,6 @@ class AccountListDownloadView(generics.ListAPIView):
             .prefetch_related(
                 "savings",
                 "venture_accounts",
-                "loan_accounts",
             )
         )
 
@@ -92,7 +91,6 @@ class AccountListDownloadView(generics.ListAPIView):
         # load types
         saving_types = list(SavingType.objects.values_list("name", flat=True))
         venture_types = list(VentureType.objects.values_list("name", flat=True))
-        loan_products = list(LoanProduct.objects.values_list("name", flat=True))
 
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
@@ -110,11 +108,6 @@ class AccountListDownloadView(generics.ListAPIView):
         # Ventures: Account + Amount
         for vt in venture_types:
             headers += [f"{vt} Account", f"{vt} Amount"]
-
-        # Loans: Account + Amount
-        for lp in loan_products:
-            # TODO: Add disbursement and repayment columns
-            headers += [f"{lp} Account", f"{lp} Amount"]
 
         # Optional: Payment Method
         headers += ["Payment Method"]
@@ -138,9 +131,6 @@ class AccountListDownloadView(generics.ListAPIView):
             for vt in venture_types:
                 row[f"{vt} Account"] = row[f"{vt} Amount"] = ""
 
-            for lp in loan_products:
-                row[f"{lp} Account"] = row[f"{lp} Amount"] = ""
-
             # ===== Fill from existing data =====
             # Savings
             for acc_no, acc_type, balance in user["savings_accounts"]:
@@ -149,11 +139,6 @@ class AccountListDownloadView(generics.ListAPIView):
 
             # Ventures
             for acc_no, acc_type, balance in user["venture_accounts"]:
-                row[f"{acc_type} Account"] = acc_no
-                # Amount column stays empty for bulk upload/edit
-
-            # Loans
-            for acc_no, acc_type, balance in user["loan_accounts"]:
                 row[f"{acc_type} Account"] = acc_no
                 # Amount column stays empty for bulk upload/edit
 
