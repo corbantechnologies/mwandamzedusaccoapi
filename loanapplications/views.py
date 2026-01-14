@@ -21,6 +21,7 @@ from loanapplications.utils import (
     compute_loan_coverage,
     notify_member_on_loan_submission,
     notify_member_on_loan_status_change,
+    send_loan_application_approved_email,
 )
 from guarantors.models import GuarantorProfile
 
@@ -411,7 +412,10 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
         instance = self.get_object()
 
         if instance.member.email:
-            notify_member_on_loan_status_change(instance)
+            if instance.status == "Approved" and self.loan_account:
+                send_loan_application_approved_email(instance, self.loan_account)
+            else:
+                notify_member_on_loan_status_change(instance)
 
         data = {
             "detail": f"Application {instance.status.lower()}.",

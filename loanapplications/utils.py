@@ -119,3 +119,33 @@ def notify_member_on_loan_status_change(loan_application):
 
     except Exception as e:
         logger.error(f"Failed to send loan status email: {str(e)}")
+
+
+def send_loan_application_approved_email(loan_application, loan_account):
+    """
+    3. Notifying members on loan application approval
+    """
+    try:
+        member = loan_application.member
+        context = {
+            "member": member,
+            "product_name": loan_application.product.name,
+            "amount": loan_application.requested_amount,
+            "loan_account_number": loan_account.account_number,
+            "current_year": current_year,
+        }
+
+        email_body = render_to_string("loan_application_approved.html", context)
+
+        params = {
+            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "to": [member.email],
+            "subject": "Loan Application Approved",
+            "html": email_body,
+        }
+
+        email = resend.Emails.send(params)
+        logger.info(f"Loan application approval email sent to {member.email}: {email}")
+
+    except Exception as e:
+        logger.error(f"Failed to send loan application approval email: {str(e)}")
