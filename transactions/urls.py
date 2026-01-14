@@ -4,6 +4,7 @@ from transactions.views import (
     AccountListView,
     AccountDetailView,
     AccountListDownloadView,
+    CombinedBulkUploadView,
 )
 
 urlpatterns = [
@@ -13,5 +14,10 @@ urlpatterns = [
         "list/download/",
         AccountListDownloadView.as_view(),
         name="account-list-download",
+    ),
+    path(
+        "bulk/upload/",
+        CombinedBulkUploadView.as_view(),
+        name="combined-bulk-upload",
     ),
 ]
