@@ -41,6 +41,7 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
         loan_app = data["loan_application"]
         guarantor = data["guarantor"]
         amount = data["guaranteed_amount"]
+        remaining_to_cover = compute_loan_coverage(loan_app)["remaining_to_cover"]
 
         if loan_app.member != member:
             raise serializers.ValidationError(
@@ -49,6 +50,15 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
                 }
             )
 
+        # you cannot apply more than what is required
+        if amount > remaining_to_cover:
+            raise serializers.ValidationError(
+                {
+                    "guaranteed_amount": f"You cannot guarantee more than what is required. Remaining to cover: {remaining_to_cover}"
+                }
+            )
+
+        # Application must be in a state that allows guarantees
         FINAL_STATES = ["Submitted", "Approved", "Disbursed", "Declined", "Cancelled"]
         if loan_app.status in FINAL_STATES:
             raise serializers.ValidationError(
