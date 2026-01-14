@@ -14,7 +14,6 @@ from loanapplications.serializers import (
     LoanStatusUpdateSerializer,
 )
 from loanaccounts.models import LoanAccount
-from savings.models import SavingsAccount
 from accounts.permissions import IsSystemAdminOrReadOnly
 from loanaccounts.serializers import LoanAccountSerializer
 from guaranteerequests.models import GuaranteeRequest
@@ -263,12 +262,6 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
                     )
 
                     # Double check capacity
-                    # Sync with savings first to ensure we have the latest capacity info
-                    total_savings = SavingsAccount.objects.filter(
-                        member=application.member
-                    ).aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
-                    profile.max_guarantee_amount = total_savings
-
                     if profile.available_capacity() < amount_to_lock:
                         raise ValueError(
                             "Insufficient guarantee capacity (savings changed)."
@@ -276,13 +269,7 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
 
                     # RESERVE
                     profile.committed_guarantee_amount += amount_to_lock
-                    # Saving both fields: max (to persist sync) and committed (to lock)
-                    profile.save(
-                        update_fields=[
-                            "max_guarantee_amount",
-                            "committed_guarantee_amount",
-                        ]
-                    )
+                    profile.save(update_fields=["committed_guarantee_amount"])
 
                     # Create accepted self-guarantee
                     GuaranteeRequest.objects.create(
