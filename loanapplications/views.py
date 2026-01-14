@@ -17,7 +17,11 @@ from loanaccounts.models import LoanAccount
 from accounts.permissions import IsSystemAdminOrReadOnly
 from loanaccounts.serializers import LoanAccountSerializer
 from guaranteerequests.models import GuaranteeRequest
-from loanapplications.utils import compute_loan_coverage
+from loanapplications.utils import (
+    compute_loan_coverage,
+    notify_member_on_loan_submission,
+    notify_member_on_loan_status_change,
+)
 from guarantors.models import GuarantorProfile
 
 
@@ -203,6 +207,8 @@ class CancelApplicationView(generics.GenericAPIView):
             application.status = "Cancelled"
             application.save(update_fields=["status"])
 
+        if application.member.email:
+            notify_member_on_loan_status_change(application)
         return Response({"detail": "Application cancelled."})
 
 
@@ -300,6 +306,10 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
                     )
 
         serializer = self.get_serializer(application)
+
+        if application.member.email:
+            notify_member_on_loan_submission(application)
+
         return Response(
             {
                 "detail": "Loan application submitted successfully.",
@@ -399,6 +409,9 @@ class ApproveOrDeclineLoanApplicationView(generics.RetrieveUpdateAPIView):
     def update(self, request, *args, **kwargs):
         response = super().update(request, *args, **kwargs)
         instance = self.get_object()
+
+        if instance.member.email:
+            notify_member_on_loan_status_change(instance)
 
         data = {
             "detail": f"Application {instance.status.lower()}.",

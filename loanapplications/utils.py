@@ -1,3 +1,5 @@
+import resend
+
 from decimal import Decimal
 from django.db import models
 from savings.models import SavingsAccount
@@ -49,3 +51,71 @@ def compute_loan_coverage(application):
         "remaining_to_cover": remaining_to_cover,
         "is_fully_covered": is_fully_covered,
     }
+
+
+import logging
+from datetime import datetime
+from django.template.loader import render_to_string
+
+logger = logging.getLogger(__name__)
+current_year = datetime.now().year
+
+
+def notify_member_on_loan_submission(loan_application):
+    """
+    1. Notifying member on loan submissions
+    """
+    try:
+        member = loan_application.member
+        context = {
+            "member": member,
+            "product_name": loan_application.product.name,
+            "amount": loan_application.requested_amount,
+            "reference": loan_application.reference,
+            "current_year": current_year,
+        }
+
+        email_body = render_to_string("loan_submitted.html", context)
+
+        params = {
+            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "to": [member.email],
+            "subject": "Loan Application Submitted",
+            "html": email_body,
+        }
+
+        email = resend.Emails.send(params)
+        logger.info(f"Loan submission email sent to {member.email}: {email}")
+
+    except Exception as e:
+        logger.error(f"Failed to send loan submission email: {str(e)}")
+
+
+def notify_member_on_loan_status_change(loan_application):
+    """
+    2. Notifying members on loan status changes
+    """
+    try:
+        member = loan_application.member
+        context = {
+            "member": member,
+            "product_name": loan_application.product.name,
+            "amount": loan_application.requested_amount,
+            "status": loan_application.status,
+            "current_year": current_year,
+        }
+
+        email_body = render_to_string("loan_status_change.html", context)
+
+        params = {
+            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "to": [member.email],
+            "subject": f"Loan Application {loan_application.status}",
+            "html": email_body,
+        }
+
+        email = resend.Emails.send(params)
+        logger.info(f"Loan status email sent to {member.email}: {email}")
+
+    except Exception as e:
+        logger.error(f"Failed to send loan status email: {str(e)}")
