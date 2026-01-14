@@ -105,9 +105,14 @@ class AccountListDownloadView(generics.ListAPIView):
         for st in saving_types:
             headers += [f"{st} Account", f"{st} Current Balance", f"{st} Amount"]
 
-        # Ventures: Account + Current Balance + Amount
+        # Ventures: Account + Current Balance + Amount + Payment
         for vt in venture_types:
-            headers += [f"{vt} Account", f"{vt} Current Balance", f"{vt} Amount"]
+            headers += [
+                f"{vt} Account",
+                f"{vt} Current Balance",
+                f"{vt} Amount",
+                f"{vt} Payment",
+            ]
 
         # Optional: Payment Method
         headers += ["Payment Method"]
@@ -133,7 +138,7 @@ class AccountListDownloadView(generics.ListAPIView):
             for vt in venture_types:
                 row[f"{vt} Account"] = row[f"{vt} Amount"] = row[
                     f"{vt} Current Balance"
-                ] = ""
+                ] = row[f"{vt} Payment"] = ""
 
             # ===== Fill from existing data =====
             # Savings
