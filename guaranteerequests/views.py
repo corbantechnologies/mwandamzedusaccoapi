@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Q, F
 
 from guaranteerequests.models import GuaranteeRequest
+from savings.models import SavingsAccount
 from guaranteerequests.serializers import (
     GuaranteeRequestSerializer,
     GuaranteeApprovalDeclineSerializer,
@@ -92,6 +93,12 @@ class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
                     instance.guaranteed_amount = amount_to_commit
                     # note: we save instance later
 
+                # Sync max_guarantee_amount to ensure capacity check is fresh
+                total_savings = SavingsAccount.objects.filter(
+                    member=profile.member
+                ).aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
+                profile.max_guarantee_amount = total_savings
+
                 # Validate capacity
                 if profile.available_capacity() < amount_to_commit:
                     raise serializers.ValidationError(
@@ -103,7 +110,9 @@ class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
                 profile.committed_guarantee_amount = (
                     F("committed_guarantee_amount") + amount_to_commit
                 )
-                profile.save(update_fields=["committed_guarantee_amount"])
+                profile.save(
+                    update_fields=["max_guarantee_amount", "committed_guarantee_amount"]
+                )
 
             instance.status = new_status
             instance.save(update_fields=["status", "guaranteed_amount"])

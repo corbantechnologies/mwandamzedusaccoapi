@@ -14,6 +14,7 @@ from loanapplications.serializers import (
     LoanStatusUpdateSerializer,
 )
 from loanaccounts.models import LoanAccount
+from savings.models import SavingsAccount
 from accounts.permissions import IsSystemAdminOrReadOnly
 from loanaccounts.serializers import LoanAccountSerializer
 from guaranteerequests.models import GuaranteeRequest
@@ -175,13 +176,33 @@ class CancelApplicationView(generics.GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        application.status = "Cancelled"
-        application.save(update_fields=["status"])
+        with transaction.atomic():
+            # Release self-guarantee if any
+            if application.self_guaranteed_amount > 0:
+                try:
+                    profile = application.member.guarantor_profile
+                    profile.committed_guarantee_amount = (
+                        F("committed_guarantee_amount")
+                        - application.self_guaranteed_amount
+                    )
+                    profile.save(update_fields=["committed_guarantee_amount"])
+                except GuarantorProfile.DoesNotExist:
+                    pass
+                application.self_guaranteed_amount = 0
+                application.save(update_fields=["self_guaranteed_amount"])
 
-        # Release any commitments (if any exist, though unlikely at early stages)
-        # Just in case they moved to In Progress and back...
-        # Typically self-guarantee is locked at Submission. Guarantors accepted at In Progress.
-        # Implies we might need to cancel active guarantees if they exist.
+            # Release external guarantees if any
+            for guarantee in application.guarantors.filter(status="Accepted"):
+                profile = guarantee.guarantor
+                profile.committed_guarantee_amount = (
+                    F("committed_guarantee_amount") - guarantee.guaranteed_amount
+                )
+                profile.save(update_fields=["committed_guarantee_amount"])
+                guarantee.status = "Cancelled"
+                guarantee.save(update_fields=["status"])
+
+            application.status = "Cancelled"
+            application.save(update_fields=["status"])
 
         return Response({"detail": "Application cancelled."})
 
@@ -201,8 +222,8 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Allow submission from In Progress or Ready for Submission
-        if application.status not in ["In Progress", "Ready for Submission"]:
+        # Allow submission from Ready for Submission
+        if application.status not in ["Ready for Submission"]:
             return Response(
                 {"detail": "Application is not ready for submission."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -242,6 +263,12 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
                     )
 
                     # Double check capacity
+                    # Sync with savings first to ensure we have the latest capacity info
+                    total_savings = SavingsAccount.objects.filter(
+                        member=application.member
+                    ).aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
+                    profile.max_guarantee_amount = total_savings
+
                     if profile.available_capacity() < amount_to_lock:
                         raise ValueError(
                             "Insufficient guarantee capacity (savings changed)."
@@ -249,7 +276,13 @@ class SubmitLoanApplicationView(generics.GenericAPIView):
 
                     # RESERVE
                     profile.committed_guarantee_amount += amount_to_lock
-                    profile.save(update_fields=["committed_guarantee_amount"])
+                    # Saving both fields: max (to persist sync) and committed (to lock)
+                    profile.save(
+                        update_fields=[
+                            "max_guarantee_amount",
+                            "committed_guarantee_amount",
+                        ]
+                    )
 
                     # Create accepted self-guarantee
                     GuaranteeRequest.objects.create(
