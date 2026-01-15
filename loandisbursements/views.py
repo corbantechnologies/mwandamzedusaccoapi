@@ -15,7 +15,7 @@ class LoanDisbursementListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         disbursement = serializer.save(disbursed_by=self.request.user)
         # Update the loan application status to Disbursed
-        loan_application = disbursement.loan_account.loan_application
+        loan_application = disbursement.loan_account.application
         loan_application.status = "Disbursed"
         loan_application.save()
         # send email to the account owner if they have an email

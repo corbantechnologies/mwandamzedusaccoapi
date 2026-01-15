@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -63,7 +64,9 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
         if not self.start_date:
             self.start_date = timezone.now().date()
 
-        self.total_loan_amount = self.principal + self.total_interest_accrued
+        self.total_loan_amount = self.principal + Decimal(
+            str(self.total_interest_accrued)
+        )
         self.outstanding_balance = self.total_loan_amount - self.total_amount_paid
         super().save(*args, **kwargs)
 
