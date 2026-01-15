@@ -5,6 +5,8 @@ from savingsdeposits.views import (
     SavingsDepositView,
     BulkSavingsDepositView,
     BulkSavingsDepositUploadView,
+    MpesaSavingsDepositView,
+    MpesaSavingsDepositCallbackView,
 )
 
 app_name = "savingsdeposits"
@@ -14,4 +16,10 @@ urlpatterns = [
     path("<str:reference>/", SavingsDepositView.as_view(), name="detail"),
     path("bulk/", BulkSavingsDepositView.as_view(), name="bulk-create"),
     path("bulk/upload/", BulkSavingsDepositUploadView.as_view(), name="bulk-upload"),
+    path("mpesa/pay/", MpesaSavingsDepositView.as_view(), name="mpesa"),
+    path(
+        "mpesa/callback/",
+        MpesaSavingsDepositCallbackView.as_view(),
+        name="mpesa-callback",
+    ),
 ]

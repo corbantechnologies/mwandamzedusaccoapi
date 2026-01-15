@@ -13,6 +13,7 @@ User = get_user_model()
 class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
     PAYMENT_METHOD_CHOICES = [
         ("Mpesa", "Mpesa"),
+        ("Mpesa STK Push", "Mpesa STK Push"),
         ("Bank Transfer", "Bank Transfer"),
         ("Cash", "Cash"),
         ("Cheque", "Cheque"),
@@ -31,6 +32,12 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
         ("Completed", "Completed"),
         ("Failed", "Failed"),
     ]
+    MPESA_PAYMENT_STATUS_CHOICES = (
+        ("PENDING", "Pending"),
+        ("COMPLETED", "Completed"),
+        ("FAILED", "Failed"),
+        ("REVERSED", "Reversed"),
+    )
 
     savings_account = models.ForeignKey(
         SavingsAccount,
@@ -65,7 +72,18 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
     receipt_number = models.CharField(max_length=50, blank=True, null=True)
     identity = models.CharField(max_length=100, blank=True, null=True, unique=True)
 
-    # Mpesa fields: to be added later
+    # Mpesa fields:
+    checkout_request_id = models.CharField(max_length=2550, blank=True, null=True)
+    callback_url = models.CharField(max_length=255, blank=True, null=True)
+    payment_status = models.CharField(
+        max_length=20, choices=MPESA_PAYMENT_STATUS_CHOICES, default="PENDING"
+    )
+    payment_status_description = models.CharField(max_length=100, blank=True, null=True)
+    confirmation_code = models.CharField(max_length=100, blank=True, null=True)
+    payment_account = models.CharField(max_length=100, blank=True, null=True)
+    payment_date = models.DateTimeField(blank=True, null=True)
+    mpesa_receipt_number = models.CharField(max_length=2550, blank=True, null=True)
+    mpesa_phone_number = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         verbose_name = "Savings Deposit"

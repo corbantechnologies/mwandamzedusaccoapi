@@ -38,6 +38,15 @@ class SavingsDepositSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "checkout_request_id",
+            "callback_url",
+            "payment_status",
+            "payment_status_description",
+            "confirmation_code",
+            "payment_account",
+            "payment_date",
+            "mpesa_receipt_number",
+            "mpesa_phone_number",
         ]
 
 
