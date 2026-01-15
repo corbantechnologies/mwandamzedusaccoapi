@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "transactions",
     "loanproducts",
     "loanaccounts",
+    "loandisbursements",
     "loanapplications",
     "guarantors",
     "guaranteerequests",
