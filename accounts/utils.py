@@ -35,7 +35,7 @@ def send_account_created_by_admin_email(user, activation_link=None):
         },
     )
     params = {
-        "from": "Mwanda Mzedu SACCO <onboarding@corbantechnologies.org>",
+        "from": "Mwanda Mzedu SACCO <onboarding@wananchimali.com>",
         "to": [user.email],
         "subject": "Activate Your Mwanda Mzedu SACCO Account",
         "html": email_body,
@@ -62,7 +62,7 @@ def send_account_activated_email(user):
             "account_activated.html", {"user": user, "current_year": current_year}
         )
         params = {
-            "from": "Mwanda Mzedu SACCO <onboarding@corbantechnologies.org>",
+            "from": "Mwanda Mzedu SACCO <onboarding@wananchimali.com>",
             "to": [user.email],
             "subject": "Welcome to Mwanda Mzedu SACCO",
             "html": email_body,
@@ -90,7 +90,7 @@ def send_forgot_password_email(user, code):
             },
         )
         params = {
-            "from": "Mwanda Mzedu SACCO <security@corbantechnologies.org>",
+            "from": "Mwanda Mzedu SACCO <security@wananchimali.com>",
             "to": [user.email],
             "subject": "Reset Your Mwanda Mzedu SACCO Password",
             "html": email_body,
@@ -116,7 +116,7 @@ def send_password_reset_success_email(user):
             },
         )
         params = {
-            "from": "Mwanda Mzedu SACCO <security@corbantechnologies.org>",
+            "from": "Mwanda Mzedu SACCO <security@wananchimali.com>",
             "to": [user.email],
             "subject": "Password Reset Successful - Mwanda Mzedu SACCO",
             "html": email_body,

@@ -11,6 +11,11 @@ from guaranteerequests.serializers import (
     GuaranteeApprovalDeclineSerializer,
 )
 from loanapplications.utils import compute_loan_coverage
+from guaranteerequests.utils import (
+    notify_guarantor_on_request,
+    notify_guarantor_on_status_change,
+    notify_member_on_guarantee_response,
+)
 
 
 class GuaranteeRequestListCreateView(generics.ListCreateAPIView):
@@ -24,7 +29,9 @@ class GuaranteeRequestListCreateView(generics.ListCreateAPIView):
     serializer_class = GuaranteeRequestSerializer
 
     def perform_create(self, serializer):
-        serializer.save(member=self.request.user)
+        instance = serializer.save(member=self.request.user)
+        if instance.guarantor.member.email:
+            notify_guarantor_on_request(instance)
 
     def get_queryset(self):
         user = self.request.user
@@ -113,6 +120,13 @@ class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
                 if coverage["is_fully_covered"]:
                     loan_app.status = "Ready for Submission"
                     loan_app.save(update_fields=["status"])
+
+        # Notify
+        if instance.guarantor.member.email:
+            notify_guarantor_on_status_change(instance)
+
+        if instance.member.email:
+            notify_member_on_guarantee_response(instance)
 
         return Response(
             GuaranteeRequestSerializer(
