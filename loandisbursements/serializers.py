@@ -29,3 +29,8 @@ class LoanDisbursementSerializer(serializers.ModelSerializer):
             "updated_at",
             "reference",
         ]
+
+    def validate(self, attrs):
+        if attrs["amount"] > attrs["loan_account"].principal:
+            raise serializers.ValidationError("Amount exceeds loan principal")
+        return attrs
