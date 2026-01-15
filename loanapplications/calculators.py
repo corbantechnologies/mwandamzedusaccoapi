@@ -52,7 +52,7 @@ def flat_rate_projection(
 
     balance = principal
     schedule: List[dict] = []
-    cur_date = start_date
+    cur_date = start_date + payment_delta
 
     for _ in range(total_periods):
         due = cur_date
