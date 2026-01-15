@@ -7,6 +7,7 @@ from loanapplications.models import LoanApplication
 
 User = get_user_model()
 
+
 class LoanAccountSerializer(serializers.ModelSerializer):
     member = serializers.SlugRelatedField(
         slug_field="member_no", queryset=User.objects.all()
@@ -17,6 +18,7 @@ class LoanAccountSerializer(serializers.ModelSerializer):
     application = serializers.SlugRelatedField(
         slug_field="reference", queryset=LoanApplication.objects.all(), required=False
     )
+    application_details = serializers.SerializerMethodField()
 
     class Meta:
         model = LoanAccount
@@ -26,6 +28,7 @@ class LoanAccountSerializer(serializers.ModelSerializer):
             "application",
             "account_number",
             "principal",
+            "total_loan_amount",
             "outstanding_balance",
             "start_date",
             "end_date",
@@ -35,4 +38,16 @@ class LoanAccountSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "application_details",
         )
+
+    def get_application_details(self, obj):
+        if obj.application:
+            return {
+                "reference": obj.application.reference,
+                "member": obj.application.member.member_no,
+                "product": obj.application.product.name,
+                "amount": obj.application.requested_amount,
+                "status": obj.application.status,
+                "projection_snapshot": obj.application.projection_snapshot,
+        }

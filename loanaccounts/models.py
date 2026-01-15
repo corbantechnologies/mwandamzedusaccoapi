@@ -1,5 +1,7 @@
+from decimal import Decimal
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from loanproducts.models import LoanProduct
@@ -40,6 +42,7 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
     )
     principal = models.DecimalField(max_digits=15, decimal_places=2)
     outstanding_balance = models.DecimalField(max_digits=15, decimal_places=2)
+    total_loan_amount = models.DecimalField(max_digits=15, decimal_places=2)
     start_date = models.DateField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     last_interest_calulation = models.DateField(null=True, blank=True)
@@ -60,9 +63,11 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
     def save(self, *args, **kwargs):
         if not self.start_date:
             self.start_date = timezone.now().date()
-        
-        # TODO: Calculate outstanding balance
-        self.outstanding_balance = self.principal
+
+        self.total_loan_amount = self.principal + Decimal(
+            str(self.total_interest_accrued)
+        )
+        self.outstanding_balance = self.total_loan_amount - self.total_amount_paid
         super().save(*args, **kwargs)
 
     def __str__(self):
