@@ -19,6 +19,10 @@ def generate_loan_payment_code(length=12):
 
 
 def send_loan_payment_made_email(user, loan_payment):
+    # Ensure we have the latest balance after signal updates
+    if loan_payment.loan_account:
+        loan_payment.loan_account.refresh_from_db()
+
     try:
         email_body = render_to_string(
             "loan_payment_made.html",

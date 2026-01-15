@@ -44,14 +44,14 @@ class LoanPayment(ReferenceModel, UniversalIdModel, TimeStampedModel):
         related_name="loan_payments",
     )
     payment_method = models.CharField(
-        max_length=20, choices=PAYMENT_METHOD_CHOICES, default="Mpesa"
+        max_length=80, choices=PAYMENT_METHOD_CHOICES, default="Mpesa"
     )
     repayment_type = models.CharField(
-        max_length=20, choices=REPAYMENT_TYPE_CHOICES, default="Regular Repayment"
+        max_length=70, choices=REPAYMENT_TYPE_CHOICES, default="Regular Repayment"
     )
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     transaction_status = models.CharField(
-        max_length=20, choices=TRANSACTION_STATUS_CHOICES, default="Pending"
+        max_length=80, choices=TRANSACTION_STATUS_CHOICES, default="Pending"
     )
     payment_date = models.DateTimeField(auto_now_add=True)
     payment_code = models.CharField(

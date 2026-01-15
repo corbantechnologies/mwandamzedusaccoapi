@@ -15,6 +15,7 @@ urlpatterns = [
     path("api/v1/loanapplications/", include("loanapplications.urls")),
     path("api/v1/loanaccounts/", include("loanaccounts.urls")),
     path("api/v1/loandisbursements/", include("loandisbursements.urls")),
+    path("api/v1/loanpayments/", include("loanpayments.urls")),
     path("api/v1/guarantors/", include("guarantors.urls")),
     path("api/v1/guaranteerequests/", include("guaranteerequests.urls")),
     path("api/v1/transactions/", include("transactions.urls")),
