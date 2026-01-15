@@ -34,10 +34,11 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
         ("Failed", "Failed"),
     ]
     MPESA_PAYMENT_STATUS_CHOICES = (
-        ("PENDING", "Pending"),
-        ("COMPLETED", "Completed"),
-        ("FAILED", "Failed"),
-        ("REVERSED", "Reversed"),
+        ("PENDING", "PENDING"),
+        ("COMPLETED", "COMPLETED"),
+        ("CANCELLED", "CANCELLED"),
+        ("FAILED", "FAILED"),
+        ("REVERSED", "REVERSED"),
     )
 
     savings_account = models.ForeignKey(
