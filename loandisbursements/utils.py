@@ -25,7 +25,7 @@ def send_disbursement_made_email(user, disbursement):
             {"user": user, "disbursement": disbursement, "current_year": current_year},
         )
         params = {
-            "from": "SACCO <finance@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <finance@wananchimali.com>",
             "to": [user.email],
             "subject": "You've got funds!",
             "html": email_body,
