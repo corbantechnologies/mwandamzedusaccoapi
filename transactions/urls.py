@@ -6,6 +6,7 @@ from transactions.views import (
     AccountListDownloadView,
     CombinedBulkUploadView,
     MemberYearlySummaryView,
+    MemberYearlySummaryPDFView,
 )
 
 urlpatterns = [
@@ -14,6 +15,11 @@ urlpatterns = [
         "summary/yearly/<str:member_no>/",
         MemberYearlySummaryView.as_view(),
         name="member-yearly-summary",
+    ),
+    path(
+        "summary/yearly/<str:member_no>/pdf/",
+        MemberYearlySummaryPDFView.as_view(),
+        name="member-yearly-summary-pdf",
     ),
     path("<str:member_no>/", AccountDetailView.as_view(), name="account-detail"),
     path(
