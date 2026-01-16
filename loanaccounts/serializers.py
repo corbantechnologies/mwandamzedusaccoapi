@@ -22,7 +22,7 @@ class LoanAccountSerializer(serializers.ModelSerializer):
     )
     application_details = serializers.SerializerMethodField()
     disbursements = LoanDisbursementSerializer(many=True, read_only=True)
-    payments = LoanPaymentSerializer(many=True, read_only=True)
+    loan_payments = LoanPaymentSerializer(many=True, read_only=True)
     product_details = serializers.SerializerMethodField()
 
     class Meta:
@@ -45,7 +45,7 @@ class LoanAccountSerializer(serializers.ModelSerializer):
             "reference",
             "product_details",
             "disbursements",
-            "payments",
+            "loan_payments",
             "application_details",
         )
 
