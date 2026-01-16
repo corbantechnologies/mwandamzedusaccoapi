@@ -71,4 +71,4 @@ class LoanAccount(UniversalIdModel, TimeStampedModel, ReferenceModel):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.member} - {self.product}"
+        return f"{self.member} - {self.product} - {self.account_number} - {self.reference}"

@@ -6,6 +6,7 @@ from datetime import date
 
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from savings.models import SavingsAccount
+from savingsdeposits.utils import generate_identity
 
 User = get_user_model()
 
@@ -13,6 +14,7 @@ User = get_user_model()
 class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
     PAYMENT_METHOD_CHOICES = [
         ("Mpesa", "Mpesa"),
+        ("Mpesa STK Push", "Mpesa STK Push"),
         ("Bank Transfer", "Bank Transfer"),
         ("Cash", "Cash"),
         ("Cheque", "Cheque"),
@@ -31,6 +33,13 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
         ("Completed", "Completed"),
         ("Failed", "Failed"),
     ]
+    MPESA_PAYMENT_STATUS_CHOICES = (
+        ("PENDING", "PENDING"),
+        ("COMPLETED", "COMPLETED"),
+        ("CANCELLED", "CANCELLED"),
+        ("FAILED", "FAILED"),
+        ("REVERSED", "REVERSED"),
+    )
 
     savings_account = models.ForeignKey(
         SavingsAccount,
@@ -59,13 +68,26 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
         max_length=100, choices=DEPOSIT_TYPE_CHOICES, default="Individual Deposit"
     )
     transaction_status = models.CharField(
-        max_length=20, choices=TRANSACTION_STATUS_CHOICES, blank=True, null=True
+        max_length=20, choices=TRANSACTION_STATUS_CHOICES, default="Pending"
     )
     is_active = models.BooleanField(default=True)
     receipt_number = models.CharField(max_length=50, blank=True, null=True)
-    identity = models.CharField(max_length=100, blank=True, null=True, unique=True)
+    identity = models.CharField(
+        max_length=100, unique=True, default=generate_identity, editable=False
+    )
 
-    # Mpesa fields: to be added later
+    # Mpesa fields:
+    checkout_request_id = models.CharField(max_length=2550, blank=True, null=True)
+    callback_url = models.CharField(max_length=255, blank=True, null=True)
+    payment_status = models.CharField(
+        max_length=20, choices=MPESA_PAYMENT_STATUS_CHOICES, default="PENDING"
+    )
+    payment_status_description = models.CharField(max_length=100, blank=True, null=True)
+    confirmation_code = models.CharField(max_length=100, blank=True, null=True)
+    payment_account = models.CharField(max_length=100, blank=True, null=True)
+    payment_date = models.DateTimeField(blank=True, null=True)
+    mpesa_receipt_number = models.CharField(max_length=2550, blank=True, null=True)
+    mpesa_phone_number = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         verbose_name = "Savings Deposit"
@@ -79,26 +101,3 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
 
     def __str__(self):
         return f"Deposit {self.reference} - {self.amount} to {self.savings_account}"
-
-    def generate_identity(self):
-        prefix = "DEP"
-        today = date.today()
-        date_str = today.strftime("%Y%m%d")
-        with transaction.atomic():
-            # Prevent race conditions
-            deposits_today = SavingsDeposit.objects.filter(
-                identity__startswith=f"{prefix}{date_str}"
-            ).count()
-            sequence = deposits_today + 1
-            self.identity = f"{prefix}{date_str}{sequence:04d}"
-
-    def save(self, *args, **kwargs):
-        with transaction.atomic():
-            if not self.identity:
-                self.identity = self.generate_identity()
-            if self.is_active and self.transaction_status == "Completed":
-                # Update the savings account balance
-                self.savings_account.balance += self.amount
-                self.savings_account.save()
-
-        return super().save(*args, **kwargs)

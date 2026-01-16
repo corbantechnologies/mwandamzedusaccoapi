@@ -1,12 +1,21 @@
 import resend
 import logging
 from datetime import datetime
-
+import string
+import random
 from django.template.loader import render_to_string
 
 logger = logging.getLogger(__name__)
 
 current_year = datetime.now().year
+
+
+def generate_identity():
+    characters = string.digits
+    year = str(current_year)[2:]
+    return (
+        f"MMSDEP{year}" + "".join(random.choice(characters) for _ in range(12))
+    )
 
 
 def send_deposit_made_email(user, deposit):

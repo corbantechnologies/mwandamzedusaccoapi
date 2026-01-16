@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "loanapplications",
     "guarantors",
     "guaranteerequests",
+    "mpesa",
 ]
 
 MIDDLEWARE = [

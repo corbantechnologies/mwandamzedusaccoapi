@@ -6,7 +6,9 @@ from ventureaccounts.serializers import VentureAccountSerializer
 
 
 class VentureAccountListCreateView(generics.ListCreateAPIView):
-    queryset = VentureAccount.objects.all()
+    queryset = VentureAccount.objects.all().prefetch_related(
+        "payments", "deposits", 
+    )
     serializer_class = VentureAccountSerializer
     permission_classes = [
         IsAuthenticated,
@@ -20,12 +22,14 @@ class VentureAccountListCreateView(generics.ListCreateAPIView):
 
 
 class VentureAccountDetailView(generics.RetrieveAPIView):
-    queryset = VentureAccount.objects.all()
+    queryset = VentureAccount.objects.all().prefetch_related(
+        "payments", "deposits", 
+    )
     serializer_class = VentureAccountSerializer
     permission_classes = [
         IsAuthenticated,
     ]
-    lookup_field = "identity"
+    lookup_field = "reference"
 
     def get_queryset(self):
         return self.queryset.filter(member=self.request.user)

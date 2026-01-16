@@ -6,5 +6,5 @@ app_name = "ventureaccounts"
 
 urlpatterns = [
     path("", VentureAccountListCreateView.as_view(), name="ventures"),
-    path("<str:identity>/", VentureAccountDetailView.as_view(), name="venture-detail"),
+    path("<str:reference>/", VentureAccountDetailView.as_view(), name="venture-detail"),
 ]

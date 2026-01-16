@@ -8,6 +8,7 @@ from django.utils import timezone
 from mwandamzeduapi.settings import MEMBER_PERIOD
 from guarantors.models import GuarantorProfile
 from savings.models import SavingsAccount
+from guaranteerequests.serializers import GuaranteeRequestSerializer
 
 User = get_user_model()
 
@@ -20,6 +21,7 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
     committed_amount = serializers.SerializerMethodField()
     available_amount = serializers.SerializerMethodField()
     has_reached_limit = serializers.SerializerMethodField()
+    guarantees = GuaranteeRequestSerializer(many=True, read_only=True)
 
     class Meta:
         model = GuarantorProfile
@@ -36,6 +38,7 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
             "reference",
             "created_at",
             "updated_at",
+            "guarantees",
         )
 
     def validate(self, data):
@@ -89,9 +92,9 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         member_no = validated_data.pop("member_no")
         member = User.objects.get(member_no=member_no)
 
-        total_savings = SavingsAccount.objects.filter(member=member).aggregate(
-            total=models.Sum("balance")
-        )["total"] or Decimal("0")
+        total_savings = SavingsAccount.objects.filter(
+            member=member, account_type__can_guarantee=True
+        ).aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
 
         profile = GuarantorProfile.objects.create(
             member=member,

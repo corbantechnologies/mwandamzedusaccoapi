@@ -1,5 +1,18 @@
+import requests
+import csv
+import io
+import cloudinary.uploader
+import logging
+import threading
+import base64
+from decimal import Decimal
 from rest_framework import generics, status
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.conf import settings
+from rest_framework.views import APIView
+
+
 from accounts.permissions import IsSystemAdminOrReadOnly
 from savingsdeposits.models import SavingsDeposit
 from savingsdeposits.serializers import (
@@ -7,20 +20,19 @@ from savingsdeposits.serializers import (
     BulkSavingsDepositSerializer,
 )
 from savingsdeposits.utils import send_deposit_made_email
-from datetime import date
+from datetime import datetime, date
 from transactions.models import BulkTransactionLog
 from django.db import transaction
 from savingtypes.models import SavingType
-import csv
-import io
-import cloudinary.uploader
-import logging
-from decimal import Decimal
+from mpesa.models import MpesaBody
+from savings.models import SavingsAccount
+from mpesa.utils import get_access_token
+
 
 logger = logging.getLogger(__name__)
 
 
-class SavingsDepositListCreateView(generics.ListCreateAPIView):
+class AdminSavingsDepositListCreateView(generics.ListCreateAPIView):
     queryset = SavingsDeposit.objects.all()
     serializer_class = SavingsDepositSerializer
     permission_classes = [IsSystemAdminOrReadOnly]
@@ -292,3 +304,25 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
                 {"error": "Internal server error"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+"""
+M-Pesa Integration
+"""
+
+
+class SavingsDepositListCreateView(generics.ListCreateAPIView):
+    """
+    Members create a savings deposit instance which defaults to Pending and PENDING
+    Then proceed to M-Pesa STK Push
+    """
+
+    queryset = SavingsDeposit.objects.all()
+    serializer_class = SavingsDepositSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(deposited_by=self.request.user)
+
+    def get_queryset(self):
+        return SavingsDeposit.objects.filter(deposited_by=self.request.user)

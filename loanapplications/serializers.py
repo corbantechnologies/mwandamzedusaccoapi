@@ -38,6 +38,12 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     remaining_to_cover = serializers.SerializerMethodField()
     is_fully_covered = serializers.SerializerMethodField()
 
+    # loan account: can be blank if the application is not approved
+    loan_account = serializers.CharField(
+        source="loan_account.account_number",
+        read_only=True,
+    )
+
     class Meta:
         model = LoanApplication
         fields = (
@@ -62,15 +68,8 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "loan_account",
             "projection",
-        )
-        read_only_fields = (
-            "status",
-            "projection",
-            "can_submit",
-            "created_at",
-            "reference",
-            "amendment_note",
         )
 
     # --- Computed Methods ---
@@ -106,9 +105,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         return not LoanAccount.objects.filter(member=member).exists()
 
     def _total_savings(self, member):
-        total = SavingsAccount.objects.filter(member=member).aggregate(
-            total=models.Sum("balance")
-        )["total"]
+        total = SavingsAccount.objects.filter(
+            member=member, account_type__can_guarantee=True
+        ).aggregate(total=models.Sum("balance"))["total"]
         return total or Decimal("0")
 
     # --- Validation ---

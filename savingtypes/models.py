@@ -7,6 +7,10 @@ class SavingType(UniversalIdModel, TimeStampedModel, ReferenceModel):
     name = models.CharField(max_length=255, unique=True)
     interest_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
+    can_guarantee = models.BooleanField(
+        default=True,
+        help_text="Can this savings account be used as collateral for a loan?",
+    )
 
     class Meta:
         verbose_name = "Savings Account Type"

@@ -12,9 +12,9 @@ def compute_loan_coverage(application):
     - Available self-guarantee (savings - committed from active loans)
     - Accepted external guarantees
     """
-    total_savings = SavingsAccount.objects.filter(member=application.member).aggregate(
-        t=models.Sum("balance")
-    )["t"] or Decimal("0")
+    total_savings = SavingsAccount.objects.filter(
+        member=application.member, account_type__can_guarantee=True
+    ).aggregate(t=models.Sum("balance"))["t"] or Decimal("0")
 
     # Calculate available based on GuarantorProfile logic
     try:
