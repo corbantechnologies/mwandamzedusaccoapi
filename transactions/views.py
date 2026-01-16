@@ -43,6 +43,8 @@ from venturepayments.utils import send_venture_payment_confirmation_email
 
 from loanpayments.models import LoanPayment
 from loandisbursements.models import LoanDisbursement
+from playwright.sync_api import sync_playwright
+
 
 logger = logging.getLogger(__name__)
 
@@ -765,3 +767,44 @@ class MemberYearlySummaryView(APIView):
             )
 
         return summary
+
+
+class MemberYearlySummaryPDFView(MemberYearlySummaryView):
+    def get(self, request, member_no, *args, **kwargs):
+        # reuse the logic from parent view
+        user = get_object_or_404(User, member_no=member_no)
+        try:
+            year = int(request.query_params.get("year", datetime.now().year))
+        except ValueError:
+            return Response(
+                {"error": "Invalid year format"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        context = {
+            "year": year,
+            "member_no": user.member_no,
+            "member_name": user.get_full_name(),
+            "savings": self.get_savings_summary(user, year),
+            "ventures": self.get_venture_summary(user, year),
+            "loans": self.get_loan_summary(user, year),
+        }
+
+        html_string = render_to_string("member_yearly_summary.html", context)
+
+        # Ensure playwright is handled correctly
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.set_content(html_string)
+            pdf_data = page.pdf(
+                format="A4",
+                margin={"top": "1cm", "right": "1cm", "bottom": "1cm", "left": "1cm"},
+                print_background=True,
+            )
+            browser.close()
+
+        response = HttpResponse(pdf_data, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'attachment; filename="Yearly_Summary_{member_no}_{year}.pdf"'
+        )
+        return response
