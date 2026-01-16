@@ -20,7 +20,7 @@ def notify_guarantor_on_request(guarantee_request, site_url=DOMAIN):
         context = {
             "guarantor": guarantor_user,
             "requestor_name": f"{member.first_name} {member.last_name}",
-            "amount": guarantee_request.guaranteed_amount,
+            # "amount": guarantee_request.guaranteed_amount,  <-- REMOVED: No amount at request time
             "reference": guarantee_request.reference,
             "current_year": current_year,
             "site_url": site_url,

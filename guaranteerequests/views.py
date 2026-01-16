@@ -90,14 +90,29 @@ class GuaranteeRequestUpdateStatusView(generics.UpdateAPIView):
             if new_status == "Accepted":
                 profile = instance.guarantor
 
-                # Check for amount adjustment
+                # Check for amount adjustment (REQUIRED for acceptance now)
                 adjusted_amount = serializer.validated_data.get("guaranteed_amount")
-                amount_to_commit = instance.guaranteed_amount
 
-                if adjusted_amount:
-                    amount_to_commit = adjusted_amount
-                    instance.guaranteed_amount = amount_to_commit
-                    # note: we save instance later
+                if not adjusted_amount:
+                    raise serializers.ValidationError(
+                        {
+                            "guaranteed_amount": "You must specify the amount you wish to guarantee."
+                        }
+                    )
+
+                amount_to_commit = adjusted_amount
+                instance.guaranteed_amount = amount_to_commit
+
+                # Check for exceeding remaining coverage
+                remaining_to_cover = compute_loan_coverage(loan_app)[
+                    "remaining_to_cover"
+                ]
+                if amount_to_commit > remaining_to_cover:
+                    raise serializers.ValidationError(
+                        {
+                            "guaranteed_amount": f"Cannot guarantee more than required coverage ({remaining_to_cover})."
+                        }
+                    )
 
                 # Validate capacity
                 if profile.available_capacity() < amount_to_commit:

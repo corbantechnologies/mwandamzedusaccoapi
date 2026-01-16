@@ -16,6 +16,7 @@ User = get_user_model()
 class GuarantorProfileSerializer(serializers.ModelSerializer):
     member = serializers.CharField(source="member.member_no", read_only=True)
     member_no = serializers.CharField(write_only=True)
+    member_name = serializers.SerializerMethodField()
 
     active_guarantees_count = serializers.SerializerMethodField()
     committed_amount = serializers.SerializerMethodField()
@@ -28,6 +29,7 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         fields = (
             "member_no",
             "member",
+            "member_name",
             "is_eligible",
             "eligibility_checked_at",
             "max_active_guarantees",
@@ -40,6 +42,9 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
             "updated_at",
             "guarantees",
         )
+
+    def get_member_name(self, obj):
+        return obj.member.get_full_name()
 
     def validate(self, data):
         if data.get("is_eligible"):
