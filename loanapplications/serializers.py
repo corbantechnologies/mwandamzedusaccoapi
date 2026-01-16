@@ -15,6 +15,7 @@ from mwandamzeduapi.settings import (
 from loanaccounts.models import LoanAccount
 from savings.models import SavingsAccount
 from loanapplications.utils import compute_loan_coverage
+from guaranteerequests.serializers import GuaranteeRequestSerializer
 
 
 class LoanApplicationSerializer(serializers.ModelSerializer):
@@ -43,6 +44,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         source="loan_account.account_number",
         read_only=True,
     )
+    guarantors = GuaranteeRequestSerializer(many=True, read_only=True)
 
     class Meta:
         model = LoanApplication
@@ -69,6 +71,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "updated_at",
             "reference",
             "loan_account",
+            "guarantors",
             "projection",
         )
 
@@ -146,9 +149,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         )
 
         # First-time borrower rules
-        if self._is_first_loan(member) and (
-            "requested_amount" in data or not self.instance
-        ):
+        if self._is_first_loan(member) and not self.instance:
             months = int(FIRST_LOAN_MIN_MEMBER_MONTHS)
             required_date = timezone.now() - relativedelta(months=months)
             if member.created_at > required_date:

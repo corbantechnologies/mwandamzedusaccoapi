@@ -36,7 +36,9 @@ class GuaranteeRequest(UniversalIdModel, TimeStampedModel, ReferenceModel):
     guarantor = models.ForeignKey(
         GuarantorProfile, on_delete=models.CASCADE, related_name="guarantees"
     )
-    guaranteed_amount = models.DecimalField(max_digits=15, decimal_places=2)
+    guaranteed_amount = models.DecimalField(
+        max_digits=15, decimal_places=2, blank=True, null=True
+    )
     status = models.CharField(max_length=25, choices=STATUS_CHOICES, default="Pending")
     notes = models.TextField(blank=True, null=True)
 

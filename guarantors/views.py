@@ -1,4 +1,5 @@
 from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
 
 from guarantors.serializers import GuarantorProfileSerializer
 from guarantors.models import GuarantorProfile
@@ -14,5 +15,6 @@ class GuarantorProfileListCreateView(generics.ListCreateAPIView):
 class GuarantorProfileDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = GuarantorProfile.objects.all()
     serializer_class = GuarantorProfileSerializer
-    permission_classes = [IsSystemAdminOrReadOnly]
-    lookup_field = "reference"
+    permission_classes = [IsAuthenticated]
+    lookup_field = "member__member_no"
+    lookup_url_kwarg = "member"
