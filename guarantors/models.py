@@ -37,9 +37,9 @@ class GuarantorProfile(UniversalIdModel, TimeStampedModel, ReferenceModel):
     def save(self, *args, **kwargs):
         # Always sync max_guarantee_amount with current savings
         if self.pk:  # Only for existing instances
-            total_savings = SavingsAccount.objects.filter(member=self.member).aggregate(
-                total=models.Sum("balance")
-            )["total"] or Decimal("0")
+            total_savings = SavingsAccount.objects.filter(
+                member=self.member, account_type__can_guarantee=True
+            ).aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
             self.max_guarantee_amount = total_savings
 
         if self.is_eligible and not self.eligibility_checked_at:

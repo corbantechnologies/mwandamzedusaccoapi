@@ -92,9 +92,9 @@ class GuarantorProfileSerializer(serializers.ModelSerializer):
         member_no = validated_data.pop("member_no")
         member = User.objects.get(member_no=member_no)
 
-        total_savings = SavingsAccount.objects.filter(member=member).aggregate(
-            total=models.Sum("balance")
-        )["total"] or Decimal("0")
+        total_savings = SavingsAccount.objects.filter(
+            member=member, account_type__can_guarantee=True
+        ).aggregate(total=models.Sum("balance"))["total"] or Decimal("0")
 
         profile = GuarantorProfile.objects.create(
             member=member,

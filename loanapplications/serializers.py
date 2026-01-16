@@ -39,7 +39,10 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     is_fully_covered = serializers.SerializerMethodField()
 
     # loan account: can be blank if the application is not approved
-    loan_account = serializers.CharField(source="loan_account.account_number", read_only=True,)
+    loan_account = serializers.CharField(
+        source="loan_account.account_number",
+        read_only=True,
+    )
 
     class Meta:
         model = LoanApplication
@@ -102,9 +105,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         return not LoanAccount.objects.filter(member=member).exists()
 
     def _total_savings(self, member):
-        total = SavingsAccount.objects.filter(member=member).aggregate(
-            total=models.Sum("balance")
-        )["total"]
+        total = SavingsAccount.objects.filter(
+            member=member, account_type__can_guarantee=True
+        ).aggregate(total=models.Sum("balance"))["total"]
         return total or Decimal("0")
 
     # --- Validation ---
