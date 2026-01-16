@@ -7,10 +7,16 @@ from transactions.views import (
     CombinedBulkUploadView,
     MemberYearlySummaryView,
     MemberYearlySummaryPDFView,
+    SaccoYearlySummaryView,
 )
 
 urlpatterns = [
     path("", AccountListView.as_view(), name="account-list"),
+    path(
+        "summary/sacco/yearly/",
+        SaccoYearlySummaryView.as_view(),
+        name="sacco-yearly-summary",
+    ),
     path(
         "summary/yearly/<str:member_no>/",
         MemberYearlySummaryView.as_view(),

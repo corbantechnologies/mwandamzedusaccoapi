@@ -17,7 +17,7 @@ from django.contrib.auth import get_user_model
 from django.http import StreamingHttpResponse
 from datetime import datetime
 from collections import defaultdict
-from django.db.models import Sum
+from django.db.models import Sum, Count
 from rest_framework.views import APIView
 
 from transactions.serializers import AccountSerializer, BulkUploadSerializer
@@ -808,3 +808,179 @@ class MemberYearlySummaryPDFView(MemberYearlySummaryView):
             f'attachment; filename="Yearly_Summary_{member_no}_{year}.pdf"'
         )
         return response
+
+
+class SaccoYearlySummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        try:
+            year = int(request.query_params.get("year", datetime.now().year))
+        except ValueError:
+            return Response(
+                {"error": "Invalid year format"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        monthly_summary = []
+
+        # Initialize Yearly Totals
+        yearly_totals = {
+            "savings_deposits": Decimal("0"),
+            "venture_deposits": Decimal("0"),
+            "venture_payments": Decimal("0"),
+            "loan_disbursements": Decimal("0"),
+            "loan_repayments": Decimal("0"),
+            "total_new_members": 0,
+            "counts": {
+                "savings_deposits": 0,
+                "venture_deposits": 0,
+                "venture_payments": 0,
+                "loan_disbursements": 0,
+                "loan_repayments": 0,
+            },
+        }
+
+        for month in range(1, 13):
+            month_data = {
+                "month": calendar.month_name[month],
+                "month_num": month,
+                "new_members": 0,
+                "counts": {
+                    "savings_deposits": 0,
+                    "venture_deposits": 0,
+                    "venture_payments": 0,
+                    "loan_disbursements": 0,
+                    "loan_repayments": 0,
+                },
+                "savings": {"total": Decimal("0"), "breakdown": {}},
+                "ventures": {
+                    "deposits": {"total": Decimal("0"), "breakdown": {}},
+                    "payments": {"total": Decimal("0"), "breakdown": {}},
+                },
+                "loans": {
+                    "disbursed": {"total": Decimal("0"), "breakdown": {}},
+                    "repaid": {"total": Decimal("0"), "breakdown": {}},
+                },
+            }
+
+            # ---- NEW MEMBERS ----
+            new_members_count = User.objects.filter(
+                created_at__year=year, created_at__month=month, is_member=True
+            ).count()
+            month_data["new_members"] = new_members_count
+            yearly_totals["total_new_members"] += new_members_count
+
+            # ---- SAVINGS ----
+            savings_qs = SavingsDeposit.objects.filter(
+                created_at__year=year,
+                created_at__month=month,
+                transaction_status="Completed",
+            )
+            # Group by Account Type
+            savings_breakdown = savings_qs.values(
+                "savings_account__account_type__name"
+            ).annotate(total=Sum("amount"), count=Count("id"))
+            for item in savings_breakdown:
+                amt = item["total"] or Decimal("0")
+                count = item["count"]
+                name = item["savings_account__account_type__name"]
+
+                month_data["savings"]["breakdown"][name] = amt
+                month_data["savings"]["total"] += amt
+                month_data["counts"]["savings_deposits"] += count
+
+                yearly_totals["savings_deposits"] += amt
+                yearly_totals["counts"]["savings_deposits"] += count
+
+            # ---- VENTURE DEPOSITS ----
+            v_dep_qs = VentureDeposit.objects.filter(
+                created_at__year=year, created_at__month=month
+            )
+            v_dep_breakdown = v_dep_qs.values(
+                "venture_account__venture_type__name"
+            ).annotate(total=Sum("amount"), count=Count("id"))
+            for item in v_dep_breakdown:
+                amt = item["total"] or Decimal("0")
+                count = item["count"]
+                name = item["venture_account__venture_type__name"]
+
+                month_data["ventures"]["deposits"]["breakdown"][name] = amt
+                month_data["ventures"]["deposits"]["total"] += amt
+                month_data["counts"]["venture_deposits"] += count
+
+                yearly_totals["venture_deposits"] += amt
+                yearly_totals["counts"]["venture_deposits"] += count
+
+            # ---- VENTURE PAYMENTS ----
+            v_pay_qs = VenturePayment.objects.filter(
+                payment_date__year=year,
+                payment_date__month=month,
+                transaction_status="Completed",
+            )
+            v_pay_breakdown = v_pay_qs.values(
+                "venture_account__venture_type__name"
+            ).annotate(total=Sum("amount"), count=Count("id"))
+            for item in v_pay_breakdown:
+                amt = item["total"] or Decimal("0")
+                count = item["count"]
+                name = item["venture_account__venture_type__name"]
+
+                month_data["ventures"]["payments"]["breakdown"][name] = amt
+                month_data["ventures"]["payments"]["total"] += amt
+                month_data["counts"]["venture_payments"] += count
+
+                yearly_totals["venture_payments"] += amt
+                yearly_totals["counts"]["venture_payments"] += count
+
+            # ---- LOAN DISBURSEMENTS ----
+            l_dis_qs = LoanDisbursement.objects.filter(
+                created_at__year=year,
+                created_at__month=month,
+                transaction_status="Completed",
+            )
+            l_dis_breakdown = l_dis_qs.values("loan_account__product__name").annotate(
+                total=Sum("amount"), count=Count("id")
+            )
+            for item in l_dis_breakdown:
+                amt = item["total"] or Decimal("0")
+                count = item["count"]
+                name = item["loan_account__product__name"]
+
+                month_data["loans"]["disbursed"]["breakdown"][name] = amt
+                month_data["loans"]["disbursed"]["total"] += amt
+                month_data["counts"]["loan_disbursements"] += count
+
+                yearly_totals["loan_disbursements"] += amt
+                yearly_totals["counts"]["loan_disbursements"] += count
+
+            # ---- LOAN REPAYMENTS ----
+            l_rep_qs = LoanPayment.objects.filter(
+                payment_date__year=year,
+                payment_date__month=month,
+                transaction_status="Completed",
+            )
+            l_rep_breakdown = l_rep_qs.values("loan_account__product__name").annotate(
+                total=Sum("amount"), count=Count("id")
+            )
+            for item in l_rep_breakdown:
+                amt = item["total"] or Decimal("0")
+                count = item["count"]
+                name = item["loan_account__product__name"]
+
+                month_data["loans"]["repaid"]["breakdown"][name] = amt
+                month_data["loans"]["repaid"]["total"] += amt
+                month_data["counts"]["loan_repayments"] += count
+
+                yearly_totals["loan_repayments"] += amt
+                yearly_totals["counts"]["loan_repayments"] += count
+
+            monthly_summary.append(month_data)
+
+        response_data = {
+            "year": year,
+            "generated_at": datetime.now(),
+            "totals": yearly_totals,
+            "monthly_summary": monthly_summary,
+        }
+
+        return Response(response_data)
