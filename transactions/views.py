@@ -41,6 +41,9 @@ from venturepayments.models import VenturePayment
 from venturepayments.serializers import VenturePaymentSerializer
 from venturepayments.utils import send_venture_payment_confirmation_email
 
+from loanpayments.models import LoanPayment
+from loandisbursements.models import LoanDisbursement
+
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
@@ -426,3 +429,204 @@ class CombinedBulkUploadView(generics.CreateAPIView):
                 else status.HTTP_400_BAD_REQUEST
             ),
         )
+
+
+# =========================================================
+# FINANCIAL SUMMARY
+# =========================================================
+
+
+class MemberYearlySummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, member_no, *args, **kwargs):
+        user = get_object_or_404(User, member_no=member_no)
+        try:
+            year = int(request.query_params.get("year", datetime.now().year))
+        except ValueError:
+            return Response(
+                {"error": "Invalid year format"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        summary = {
+            "year": year,
+            "member_no": user.member_no,
+            "member_name": user.get_full_name(),
+            "savings": self.get_savings_summary(user, year),
+            "ventures": self.get_venture_summary(user, year),
+            "loans": self.get_loan_summary(user, year),
+        }
+        return Response(summary)
+
+    def get_savings_summary(self, user, year):
+        accounts = SavingsAccount.objects.filter(member=user).select_related(
+            "account_type"
+        )
+        summary = []
+
+        for acc in accounts:
+            monthly_data = []
+            # Balance Brought Forward
+            bf_deposits = SavingsDeposit.objects.filter(
+                savings_account=acc,
+                created_at__year__lt=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            running_balance = bf_deposits
+
+            for month in range(1, 13):
+                month_deposits = SavingsDeposit.objects.filter(
+                    savings_account=acc,
+                    created_at__year=year,
+                    created_at__month=month,
+                    transaction_status="Completed",
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+                opening = running_balance
+                running_balance += month_deposits
+
+                monthly_data.append(
+                    {
+                        "month": calendar.month_name[month],
+                        "month_num": month,
+                        "opening_balance": opening,
+                        "deposits": month_deposits,
+                        "withdrawals": Decimal("0.00"),
+                        "closing_balance": running_balance,
+                    }
+                )
+
+            summary.append(
+                {
+                    "account_number": acc.account_number,
+                    "type": acc.account_type.name,
+                    "currency": "KES",  # Default
+                    "monthly_summary": monthly_data,
+                }
+            )
+        return summary
+
+    def get_venture_summary(self, user, year):
+        accounts = VentureAccount.objects.filter(member=user).select_related(
+            "venture_type"
+        )
+        summary = []
+
+        for acc in accounts:
+            monthly_data = []
+
+            bf_deposits = VentureDeposit.objects.filter(
+                venture_account=acc, created_at__year__lt=year
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            bf_payments = VenturePayment.objects.filter(
+                venture_account=acc,
+                payment_date__year__lt=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            running_balance = bf_deposits - bf_payments
+
+            for month in range(1, 13):
+                month_deposits = VentureDeposit.objects.filter(
+                    venture_account=acc,
+                    created_at__year=year,
+                    created_at__month=month,
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+                month_payments = VenturePayment.objects.filter(
+                    venture_account=acc,
+                    payment_date__year=year,
+                    payment_date__month=month,
+                    transaction_status="Completed",
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+                opening = running_balance
+                running_balance = running_balance + month_deposits - month_payments
+
+                monthly_data.append(
+                    {
+                        "month": calendar.month_name[month],
+                        "month_num": month,
+                        "opening_balance": opening,
+                        "deposits": month_deposits,
+                        "payments": month_payments,
+                        "closing_balance": running_balance,
+                    }
+                )
+
+            summary.append(
+                {
+                    "account_number": acc.account_number,
+                    "type": acc.venture_type.name,
+                    "monthly_summary": monthly_data,
+                }
+            )
+        return summary
+
+    def get_loan_summary(self, user, year):
+        accounts = LoanAccount.objects.filter(member=user).select_related("product")
+        summary = []
+
+        for acc in accounts:
+            monthly_data = []
+
+            # Loans Cash Flow Logic:
+            # Positive Balance = OUTSTANDING DEBT
+
+            bf_disbursed = LoanDisbursement.objects.filter(
+                loan_account=acc,
+                created_at__year__lt=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            bf_paid = LoanPayment.objects.filter(
+                loan_account=acc,
+                payment_date__year__lt=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            # B/F Debt = Disbursed - Paid
+            running_balance = bf_disbursed - bf_paid
+
+            for month in range(1, 13):
+                month_disbursed = LoanDisbursement.objects.filter(
+                    loan_account=acc,
+                    created_at__year=year,
+                    created_at__month=month,
+                    transaction_status="Completed",
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+                month_paid = LoanPayment.objects.filter(
+                    loan_account=acc,
+                    payment_date__year=year,
+                    payment_date__month=month,
+                    transaction_status="Completed",
+                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+                opening = running_balance
+                # Debt increases with disbursement, decreases with payment
+                running_balance = running_balance + month_disbursed - month_paid
+
+                monthly_data.append(
+                    {
+                        "month": calendar.month_name[month],
+                        "month_num": month,
+                        "opening_balance": opening,
+                        "disbursed": month_disbursed,
+                        "paid": month_paid,
+                        "closing_balance": running_balance,
+                    }
+                )
+
+            summary.append(
+                {
+                    "account_number": acc.account_number,
+                    "product": acc.product.name,
+                    "initial_principal": acc.principal,
+                    "monthly_summary": monthly_data,
+                }
+            )
+
+        return summary
