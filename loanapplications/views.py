@@ -36,6 +36,13 @@ class LoanApplicationListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         serializer.save(member=self.request.user, status="Pending")
 
+    def get_queryset(self):
+        # is_sacco_admin sees all
+        # is_member sees own
+        if self.request.user.is_staff or self.request.user.is_sacco_admin:
+            return self.queryset
+        return self.queryset.filter(member=self.request.user)
+
 
 class LoanApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = LoanApplication.objects.all()
