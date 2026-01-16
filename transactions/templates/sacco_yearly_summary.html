@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SACCO Yearly Summary</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+            body {
+                font-family: 'Inter', sans-serif;
+                color: #111827;
+                font-size: 11px;
+                padding: 20px;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 2rem;
+                border-bottom: 2px solid #e5e7eb;
+                padding-bottom: 1rem;
+            }
+
+            .header h1 {
+                font-size: 24px;
+                margin: 0;
+                color: #111827;
+            }
+
+            .header p {
+                margin: 5px 0 0;
+                color: #6b7280;
+                font-size: 14px;
+            }
+
+            .cards-container {
+                display: flex;
+                gap: 15px;
+                margin-bottom: 30px;
+                flex-wrap: wrap;
+            }
+
+            .card {
+                flex: 1;
+                background-color: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 15px;
+                min-width: 150px;
+            }
+
+            .card-title {
+                color: #6b7280;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 5px;
+                font-weight: 600;
+            }
+
+            .card-value {
+                font-size: 18px;
+                font-weight: 700;
+                color: #111827;
+            }
+
+            .card-subtext {
+                font-size: 10px;
+                color: #9ca3af;
+                margin-top: 2px;
+            }
+
+            .main-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10px;
+                margin-bottom: 30px;
+            }
+
+            .main-table th,
+            .main-table td {
+                border: 1px solid #e5e7eb;
+                padding: 8px 10px;
+                text-align: right;
+            }
+
+            .main-table th {
+                background-color: #f3f4f6;
+                color: #374151;
+                font-weight: 600;
+                text-transform: uppercase;
+                text-align: center;
+            }
+
+            .main-table td:first-child {
+                text-align: left;
+                font-weight: 600;
+                color: #111827;
+                background-color: #fcfcfc;
+            }
+
+            .table-section-header {
+                background-color: #e5e7eb !important;
+                font-size: 11px;
+                font-weight: 700;
+                text-align: center !important;
+            }
+
+            .text-left {
+                text-align: left !important;
+            }
+
+            .text-center {
+                text-align: center !important;
+            }
+
+            @page {
+                size: A4 landscape;
+                margin: 1cm;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="header">
+            <h1>Mwanda Mzedu SACCO</h1>
+            <p>Annual Financial Report - {{ year }}</p>
+            <p style="font-size: 10px; margin-top: 5px;">Generated on {% now "F j, Y, H:i" %}</p>
+        </div>
+
+        <!-- OVERVIEW CARDS -->
+        <div class="cards-container">
+            <div class="card">
+                <div class="card-title">New Members</div>
+                <div class="card-value">{{ totals.total_new_members }}</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Savings Deposits</div>
+                <div class="card-value">{{ totals.savings_deposits }}</div>
+                <div class="card-subtext">{{ totals.counts.savings_deposits }} Transactions</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Venture Deposits</div>
+                <div class="card-value">{{ totals.venture_deposits }}</div>
+                <div class="card-subtext">{{ totals.counts.venture_deposits }} Transactions</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Loans Disbursed</div>
+                <div class="card-value">{{ totals.loan_disbursements }}</div>
+                <div class="card-subtext">{{ totals.counts.loan_disbursements }} Loans</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Loans Repaid</div>
+                <div class="card-value">{{ totals.loan_repayments }}</div>
+                <div class="card-subtext">{{ totals.counts.loan_repayments }} Repayments</div>
+            </div>
+        </div>
+
+        <!-- DETAILED MONTHLY TABLE -->
+        <table class="main-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" width="8%">Month</th>
+                    <th rowspan="2" width="6%">New Members</th>
+                    <th colspan="2">Savings</th>
+                    <th colspan="2">Ventures</th>
+                    <th colspan="2">Loans</th>
+                </tr>
+                <tr>
+                    <!-- Savings -->
+                    <th>Deposits (Amt)</th>
+                    <th>Count</th>
+
+                    <!-- Ventures -->
+                    <th>Deposits (Amt)</th>
+                    <th>Payments (Amt)</th>
+
+                    <!-- Loans -->
+                    <th>Disbursed (Amt)</th>
+                    <th>Repaid (Amt)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in monthly_summary %}
+                <tr>
+                    <td>{{ m.month }}</td>
+                    <td class="text-center">{{ m.new_members }}</td>
+
+                    <!-- Savings -->
+                    <td>{{ m.savings.total }}</td>
+                    <td class="text-center">{{ m.counts.savings_deposits }}</td>
+
+                    <!-- Ventures -->
+                    <td>{{ m.ventures.deposits.total }}</td>
+                    <td>{{ m.ventures.payments.total }}</td>
+
+                    <!-- Loans -->
+                    <td>{{ m.loans.disbursed.total }}</td>
+                    <td>{{ m.loans.repaid.total }}</td>
+                </tr>
+                {% endfor %}
+                <!-- Grand Total Row -->
+                <tr style="background-color: #f3f4f6; font-weight: 700;">
+                    <td>TOTAL</td>
+                    <td class="text-center">{{ totals.total_new_members }}</td>
+                    <td>{{ totals.savings_deposits }}</td>
+                    <td class="text-center">{{ totals.counts.savings_deposits }}</td>
+                    <td>{{ totals.venture_deposits }}</td>
+                    <td>{{ totals.venture_payments }}</td>
+                    <td>{{ totals.loan_disbursements }}</td>
+                    <td>{{ totals.loan_repayments }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- BREAKDOWN SUMMARIES (Optional detailed breakdown could go here if needed) -->
+
+    </body>
+
+</html>

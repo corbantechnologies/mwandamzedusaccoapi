@@ -8,6 +8,7 @@ from transactions.views import (
     MemberYearlySummaryView,
     MemberYearlySummaryPDFView,
     SaccoYearlySummaryView,
+    SaccoYearlySummaryPDFView,
 )
 
 urlpatterns = [
@@ -16,6 +17,11 @@ urlpatterns = [
         "summary/sacco/yearly/",
         SaccoYearlySummaryView.as_view(),
         name="sacco-yearly-summary",
+    ),
+    path(
+        "summary/sacco/yearly/pdf/",
+        SaccoYearlySummaryPDFView.as_view(),
+        name="sacco-yearly-summary-pdf",
     ),
     path(
         "summary/yearly/<str:member_no>/",

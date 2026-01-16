@@ -813,14 +813,7 @@ class MemberYearlySummaryPDFView(MemberYearlySummaryView):
 class SaccoYearlySummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, *args, **kwargs):
-        try:
-            year = int(request.query_params.get("year", datetime.now().year))
-        except ValueError:
-            return Response(
-                {"error": "Invalid year format"}, status=status.HTTP_400_BAD_REQUEST
-            )
-
+    def get_summary_data(self, year):
         monthly_summary = []
 
         # Initialize Yearly Totals
@@ -976,11 +969,53 @@ class SaccoYearlySummaryView(APIView):
 
             monthly_summary.append(month_data)
 
-        response_data = {
+        return {
             "year": year,
             "generated_at": datetime.now(),
             "totals": yearly_totals,
             "monthly_summary": monthly_summary,
         }
 
-        return Response(response_data)
+    def get(self, request, *args, **kwargs):
+        try:
+            year = int(request.query_params.get("year", datetime.now().year))
+        except ValueError:
+            return Response(
+                {"error": "Invalid year format"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = self.get_summary_data(year)
+        return Response(data)
+
+
+class SaccoYearlySummaryPDFView(SaccoYearlySummaryView):
+    def get(self, request, *args, **kwargs):
+        try:
+            year = int(request.query_params.get("year", datetime.now().year))
+        except ValueError:
+            return Response(
+                {"error": "Invalid year format"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        context = self.get_summary_data(year)
+
+        html_string = render_to_string("sacco_yearly_summary.html", context)
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page()
+            page.set_content(html_string)
+            # Use landscape for SACCO summary as it has many columns
+            pdf_data = page.pdf(
+                format="A4",
+                landscape=True,
+                margin={"top": "1cm", "right": "1cm", "bottom": "1cm", "left": "1cm"},
+                print_background=True,
+            )
+            browser.close()
+
+        response = HttpResponse(pdf_data, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'attachment; filename="SACCO_Yearly_Summary_{year}.pdf"'
+        )
+        return response
