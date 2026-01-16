@@ -26,6 +26,7 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
     )
     loan_application_details = serializers.SerializerMethodField()
     guarantor_name = serializers.SerializerMethodField()
+    remaining_to_cover = serializers.SerializerMethodField()
 
     def get_guarantor_name(self, obj):
         return obj.guarantor.member.get_full_name()
@@ -37,8 +38,14 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
             "product": obj.loan_application.product.name,
             "amount": obj.loan_application.requested_amount,
             "status": obj.loan_application.status,
+            "remaining_to_cover": compute_loan_coverage(obj.loan_application)[
+                "remaining_to_cover"
+            ],
             "projection_snapshot": obj.loan_application.projection_snapshot,
         }
+
+    def get_remaining_to_cover(self, obj):
+        return compute_loan_coverage(obj.loan_application)["remaining_to_cover"]
 
     class Meta:
         model = GuaranteeRequest
@@ -53,6 +60,7 @@ class GuaranteeRequestSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "remaining_to_cover",
             "loan_application_details",
         )
 
