@@ -466,6 +466,14 @@ class MemberYearlySummaryView(APIView):
 
         for acc in accounts:
             monthly_data = []
+
+            # Yearly Totals
+            total_yearly_deposits = SavingsDeposit.objects.filter(
+                savings_account=acc,
+                created_at__year=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
             # Balance Brought Forward
             bf_deposits = SavingsDeposit.objects.filter(
                 savings_account=acc,
@@ -476,24 +484,43 @@ class MemberYearlySummaryView(APIView):
             running_balance = bf_deposits
 
             for month in range(1, 13):
-                month_deposits = SavingsDeposit.objects.filter(
+                # Monthly Aggregates
+                month_deposits_qs = SavingsDeposit.objects.filter(
                     savings_account=acc,
                     created_at__year=year,
                     created_at__month=month,
                     transaction_status="Completed",
-                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+                )
+
+                month_deposits_total = month_deposits_qs.aggregate(total=Sum("amount"))[
+                    "total"
+                ] or Decimal("0")
+
+                # Fetch Transactions
+                transactions = []
+                for deposit in month_deposits_qs.order_by("created_at"):
+                    transactions.append(
+                        {
+                            "date": deposit.created_at.date(),
+                            "type": "Savings Deposit",
+                            "amount": deposit.amount,
+                            "reference": deposit.reference or deposit.identity,
+                            "method": deposit.payment_method,
+                        }
+                    )
 
                 opening = running_balance
-                running_balance += month_deposits
+                running_balance += month_deposits_total
 
                 monthly_data.append(
                     {
                         "month": calendar.month_name[month],
                         "month_num": month,
                         "opening_balance": opening,
-                        "deposits": month_deposits,
+                        "deposits": month_deposits_total,
                         "withdrawals": Decimal("0.00"),
                         "closing_balance": running_balance,
+                        "transactions": transactions,
                     }
                 )
 
@@ -501,7 +528,8 @@ class MemberYearlySummaryView(APIView):
                 {
                     "account_number": acc.account_number,
                     "type": acc.account_type.name,
-                    "currency": "KES",  # Default
+                    "currency": "KES",
+                    "totals": {"total_deposits": total_yearly_deposits},
                     "monthly_summary": monthly_data,
                 }
             )
@@ -516,6 +544,17 @@ class MemberYearlySummaryView(APIView):
         for acc in accounts:
             monthly_data = []
 
+            # Yearly Totals
+            total_yearly_deposits = VentureDeposit.objects.filter(
+                venture_account=acc, created_at__year=year
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            total_yearly_payments = VenturePayment.objects.filter(
+                venture_account=acc,
+                payment_date__year=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
             bf_deposits = VentureDeposit.objects.filter(
                 venture_account=acc, created_at__year__lt=year
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
@@ -529,30 +568,69 @@ class MemberYearlySummaryView(APIView):
             running_balance = bf_deposits - bf_payments
 
             for month in range(1, 13):
-                month_deposits = VentureDeposit.objects.filter(
+                # Monthly Aggregates
+                month_deposits_qs = VentureDeposit.objects.filter(
                     venture_account=acc,
                     created_at__year=year,
                     created_at__month=month,
-                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+                )
+                month_deposits_total = month_deposits_qs.aggregate(total=Sum("amount"))[
+                    "total"
+                ] or Decimal("0")
 
-                month_payments = VenturePayment.objects.filter(
+                month_payments_qs = VenturePayment.objects.filter(
                     venture_account=acc,
                     payment_date__year=year,
                     payment_date__month=month,
                     transaction_status="Completed",
-                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+                )
+                month_payments_total = month_payments_qs.aggregate(total=Sum("amount"))[
+                    "total"
+                ] or Decimal("0")
+
+                # Fetch Transactions & Combine
+                transactions = []
+                for dep in month_deposits_qs:
+                    transactions.append(
+                        {
+                            "date": dep.created_at.date(),
+                            "type": "Venture Deposit",
+                            "amount": dep.amount,
+                            "reference": dep.identity,
+                            "method": "N/A",  # VentureDeposit doesn't inherently have method in this context usually, verify model if needed
+                        }
+                    )
+
+                for pay in month_payments_qs:
+                    transactions.append(
+                        {
+                            "date": pay.payment_date,
+                            "type": "Venture Payment",  # This is a withdrawal/payment FROM the account
+                            "amount": pay.amount,
+                            "reference": pay.reference
+                            or pay.receipt_number
+                            or pay.identity,
+                            "method": pay.payment_method,
+                        }
+                    )
+
+                # Sort by date
+                transactions.sort(key=lambda x: x["date"])
 
                 opening = running_balance
-                running_balance = running_balance + month_deposits - month_payments
+                running_balance = (
+                    running_balance + month_deposits_total - month_payments_total
+                )
 
                 monthly_data.append(
                     {
                         "month": calendar.month_name[month],
                         "month_num": month,
                         "opening_balance": opening,
-                        "deposits": month_deposits,
-                        "payments": month_payments,
+                        "deposits": month_deposits_total,
+                        "payments": month_payments_total,
                         "closing_balance": running_balance,
+                        "transactions": transactions,
                     }
                 )
 
@@ -560,6 +638,10 @@ class MemberYearlySummaryView(APIView):
                 {
                     "account_number": acc.account_number,
                     "type": acc.venture_type.name,
+                    "totals": {
+                        "total_deposits": total_yearly_deposits,
+                        "total_payments": total_yearly_payments,
+                    },
                     "monthly_summary": monthly_data,
                 }
             )
@@ -571,6 +653,19 @@ class MemberYearlySummaryView(APIView):
 
         for acc in accounts:
             monthly_data = []
+
+            # Yearly Totals
+            total_yearly_disbursed = LoanDisbursement.objects.filter(
+                loan_account=acc,
+                created_at__year=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+
+            total_yearly_repaid = LoanPayment.objects.filter(
+                loan_account=acc,
+                payment_date__year=year,
+                transaction_status="Completed",
+            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             # Loans Cash Flow Logic:
             # Positive Balance = OUTSTANDING DEBT
@@ -591,32 +686,68 @@ class MemberYearlySummaryView(APIView):
             running_balance = bf_disbursed - bf_paid
 
             for month in range(1, 13):
-                month_disbursed = LoanDisbursement.objects.filter(
+                # Monthly Aggregates
+                month_disbursed_qs = LoanDisbursement.objects.filter(
                     loan_account=acc,
                     created_at__year=year,
                     created_at__month=month,
                     transaction_status="Completed",
-                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+                )
+                month_disbursed_total = month_disbursed_qs.aggregate(
+                    total=Sum("amount")
+                )["total"] or Decimal("0")
 
-                month_paid = LoanPayment.objects.filter(
+                month_paid_qs = LoanPayment.objects.filter(
                     loan_account=acc,
                     payment_date__year=year,
                     payment_date__month=month,
                     transaction_status="Completed",
-                ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
+                )
+                month_paid_total = month_paid_qs.aggregate(total=Sum("amount"))[
+                    "total"
+                ] or Decimal("0")
+
+                # Fetch Transactions & Combine
+                transactions = []
+                for dis in month_disbursed_qs:
+                    transactions.append(
+                        {
+                            "date": dis.created_at.date(),
+                            "type": "Loan Disbursement",
+                            "amount": dis.amount,
+                            "reference": dis.reference,
+                        }
+                    )
+
+                for rep in month_paid_qs:
+                    transactions.append(
+                        {
+                            "date": rep.payment_date.date(),
+                            "type": "Loan Repayment",
+                            "amount": rep.amount,
+                            "reference": rep.reference,
+                            "method": rep.payment_method,
+                        }
+                    )
+
+                # Sort by date
+                transactions.sort(key=lambda x: x["date"])
 
                 opening = running_balance
                 # Debt increases with disbursement, decreases with payment
-                running_balance = running_balance + month_disbursed - month_paid
+                running_balance = (
+                    running_balance + month_disbursed_total - month_paid_total
+                )
 
                 monthly_data.append(
                     {
                         "month": calendar.month_name[month],
                         "month_num": month,
                         "opening_balance": opening,
-                        "disbursed": month_disbursed,
-                        "paid": month_paid,
+                        "disbursed": month_disbursed_total,
+                        "paid": month_paid_total,
                         "closing_balance": running_balance,
+                        "transactions": transactions,
                     }
                 )
 
@@ -625,6 +756,10 @@ class MemberYearlySummaryView(APIView):
                     "account_number": acc.account_number,
                     "product": acc.product.name,
                     "initial_principal": acc.principal,
+                    "totals": {
+                        "total_disbursed": total_yearly_disbursed,
+                        "total_repaid": total_yearly_repaid,
+                    },
                     "monthly_summary": monthly_data,
                 }
             )
