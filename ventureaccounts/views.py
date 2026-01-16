@@ -6,7 +6,9 @@ from ventureaccounts.serializers import VentureAccountSerializer
 
 
 class VentureAccountListCreateView(generics.ListCreateAPIView):
-    queryset = VentureAccount.objects.all()
+    queryset = VentureAccount.objects.all().prefetch_related(
+        "payments", "deposits", "venture_type_details"
+    )
     serializer_class = VentureAccountSerializer
     permission_classes = [
         IsAuthenticated,
@@ -20,7 +22,9 @@ class VentureAccountListCreateView(generics.ListCreateAPIView):
 
 
 class VentureAccountDetailView(generics.RetrieveAPIView):
-    queryset = VentureAccount.objects.all()
+    queryset = VentureAccount.objects.all().prefetch_related(
+        "payments", "deposits", "venture_type_details"
+    )
     serializer_class = VentureAccountSerializer
     permission_classes = [
         IsAuthenticated,

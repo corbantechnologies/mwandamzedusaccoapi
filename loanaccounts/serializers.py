@@ -23,6 +23,7 @@ class LoanAccountSerializer(serializers.ModelSerializer):
     application_details = serializers.SerializerMethodField()
     disbursements = LoanDisbursementSerializer(many=True, read_only=True)
     payments = LoanPaymentSerializer(many=True, read_only=True)
+    product_details = serializers.SerializerMethodField()
 
     class Meta:
         model = LoanAccount
@@ -42,6 +43,7 @@ class LoanAccountSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "product_details",
             "disbursements",
             "payments",
             "application_details",
@@ -57,3 +59,12 @@ class LoanAccountSerializer(serializers.ModelSerializer):
                 "status": obj.application.status,
                 "projection_snapshot": obj.application.projection_snapshot,
             }
+
+    def get_product_details(self, obj):
+        return {
+            "name": obj.product.name,
+            "interest_rate": obj.product.interest_rate,
+            "interest_period": obj.product.interest_period,
+            "calculation_schedule": obj.product.calculation_schedule,
+            "is_active": obj.product.is_active,
+        }

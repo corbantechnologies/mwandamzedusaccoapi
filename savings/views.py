@@ -6,7 +6,9 @@ from accounts.permissions import IsSystemAdminOrReadOnly
 
 
 class SavingListCreateView(generics.ListCreateAPIView):
-    queryset = SavingsAccount.objects.all()
+    queryset = SavingsAccount.objects.all().prefetch_related(
+        "deposits", "account_type_details"
+    )
     serializer_class = SavingSerializer
     permission_classes = [
         IsSystemAdminOrReadOnly,
@@ -20,7 +22,9 @@ class SavingListCreateView(generics.ListCreateAPIView):
 
 
 class SavingDetailView(generics.RetrieveUpdateAPIView):
-    queryset = SavingsAccount.objects.all()
+    queryset = SavingsAccount.objects.all().prefetch_related(
+        "deposits", "account_type_details"
+    )
     serializer_class = SavingSerializer
     permission_classes = [
         IsSystemAdminOrReadOnly,
