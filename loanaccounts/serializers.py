@@ -4,6 +4,8 @@ from django.contrib.auth import get_user_model
 from loanaccounts.models import LoanAccount
 from loanproducts.models import LoanProduct
 from loanapplications.models import LoanApplication
+from loandisbursements.serializers import LoanDisbursementSerializer
+from loanpayments.serializers import LoanPaymentSerializer
 
 User = get_user_model()
 
@@ -19,6 +21,8 @@ class LoanAccountSerializer(serializers.ModelSerializer):
         slug_field="reference", queryset=LoanApplication.objects.all(), required=False
     )
     application_details = serializers.SerializerMethodField()
+    disbursements = LoanDisbursementSerializer(many=True, read_only=True)
+    payments = LoanPaymentSerializer(many=True, read_only=True)
 
     class Meta:
         model = LoanAccount
@@ -38,6 +42,8 @@ class LoanAccountSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "disbursements",
+            "payments",
             "application_details",
         )
 
@@ -50,4 +56,4 @@ class LoanAccountSerializer(serializers.ModelSerializer):
                 "amount": obj.application.requested_amount,
                 "status": obj.application.status,
                 "projection_snapshot": obj.application.projection_snapshot,
-        }
+            }
