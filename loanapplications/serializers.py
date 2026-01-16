@@ -38,6 +38,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     remaining_to_cover = serializers.SerializerMethodField()
     is_fully_covered = serializers.SerializerMethodField()
 
+    # loan account: can be blank if the application is not approved
+    loan_account = serializers.CharField(source="loan_account.account_number", read_only=True,)
+
     class Meta:
         model = LoanApplication
         fields = (
@@ -62,15 +65,8 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "reference",
+            "loan_account",
             "projection",
-        )
-        read_only_fields = (
-            "status",
-            "projection",
-            "can_submit",
-            "created_at",
-            "reference",
-            "amendment_note",
         )
 
     # --- Computed Methods ---
