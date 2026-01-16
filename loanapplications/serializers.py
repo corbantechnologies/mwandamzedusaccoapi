@@ -146,9 +146,7 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         )
 
         # First-time borrower rules
-        if self._is_first_loan(member) and (
-            "requested_amount" in data or not self.instance
-        ):
+        if self._is_first_loan(member) and not self.instance:
             months = int(FIRST_LOAN_MIN_MEMBER_MONTHS)
             required_date = timezone.now() - relativedelta(months=months)
             if member.created_at > required_date:

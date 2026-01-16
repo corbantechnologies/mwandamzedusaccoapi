@@ -5,7 +5,7 @@ from savingsdeposits.views import (
     SavingsDepositView,
     BulkSavingsDepositView,
     BulkSavingsDepositUploadView,
-    AdminSavingsDepositListCreateView,
+    AdminSavingsDepositCreateView,
 )
 
 app_name = "savingsdeposits"
@@ -16,6 +16,6 @@ urlpatterns = [
     path("bulk/", BulkSavingsDepositView.as_view(), name="bulk-create"),
     path("bulk/upload/", BulkSavingsDepositUploadView.as_view(), name="bulk-upload"),
     path(
-        "admin/", AdminSavingsDepositListCreateView.as_view(), name="admin-list-create"
+        "admin/create/", AdminSavingsDepositCreateView.as_view(), name="admin-create"
     ),
 ]

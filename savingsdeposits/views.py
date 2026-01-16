@@ -32,13 +32,23 @@ from mpesa.utils import get_access_token
 logger = logging.getLogger(__name__)
 
 
-class AdminSavingsDepositListCreateView(generics.ListCreateAPIView):
+class AdminSavingsDepositCreateView(generics.CreateAPIView):
     queryset = SavingsDeposit.objects.all()
     serializer_class = SavingsDepositSerializer
     permission_classes = [IsSystemAdminOrReadOnly]
 
     def perform_create(self, serializer):
-        deposit = serializer.save(deposited_by=self.request.user)
+        deposit = serializer.save(
+            deposited_by=self.request.user,
+            transaction_status="Completed",
+            payment_status="COMPLETED",
+            payment_status_description="Admin Deposit",
+        )
+
+        # Update savings account balance
+        deposit.savings_account.balance += deposit.amount
+        deposit.savings_account.save(update_fields=["balance"])
+
         # Send email to the account owner if they have an email address
         account_owner = deposit.savings_account.member
         if account_owner.email:
@@ -89,15 +99,20 @@ class BulkSavingsDepositView(generics.CreateAPIView):
                     # Add deposited_by and reference
                     deposit_data["deposited_by"] = admin
                     deposit_data["reference"] = f"{prefix}-{index:04d}"
-                    deposit_data["transaction_status"] = deposit_data.get(
-                        "transaction_status", "Completed"
-                    )
+                    deposit_data["transaction_status"] = "Completed"
+                    deposit_data["payment_status"] = "COMPLETED"
+                    deposit_data["payment_status_description"] = "Bulk Admin Deposit"
                     deposit_data["is_active"] = deposit_data.get("is_active", True)
 
                     # Create deposit
                     deposit_serializer = SavingsDepositSerializer(data=deposit_data)
                     if deposit_serializer.is_valid():
                         deposit = deposit_serializer.save()
+
+                        # Update savings account balance
+                        deposit.savings_account.balance += deposit.amount
+                        deposit.savings_account.save(update_fields=["balance"])
+
                         success_count += 1
                         # Send email if account owner has email
                         account_owner = deposit.savings_account.member
@@ -233,6 +248,8 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
                                     "deposit_type": "Individual Deposit",
                                     "currency": "KES",
                                     "transaction_status": "Completed",
+                                    "payment_status": "COMPLETED",
+                                    "payment_status_description": "Bulk Upload Deposit",
                                     "is_active": True,
                                 }
                                 deposits_data.append(deposit_data)
@@ -252,6 +269,11 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
                         deposit_serializer = SavingsDepositSerializer(data=deposit_data)
                         if deposit_serializer.is_valid():
                             deposit = deposit_serializer.save(deposited_by=admin)
+
+                            # Update savings account balance
+                            deposit.savings_account.balance += deposit.amount
+                            deposit.savings_account.save(update_fields=["balance"])
+
                             success_count += 1
                             account_owner = deposit.savings_account.member
 
