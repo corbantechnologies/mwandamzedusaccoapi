@@ -49,6 +49,24 @@ INSTALLED_APPS = [
     # Savings
     "savingtypes",
     "savings",
+    "savingsdeposits",
+    # Ventures
+    "venturetypes",
+    "ventureaccounts",
+    "venturedeposits",
+    "venturepayments",
+    # Loans
+    "loanproducts",
+    "loanapplications",
+    "loanaccounts",
+    "loanpayments",
+    "loandisbursements",
+    "loanpenalties",
+    "existingloans",
+    "existingloanspayments",
+    # Guarantors
+    "guarantors",
+    "guaranteerequests",
 ]
 
 MIDDLEWARE = [

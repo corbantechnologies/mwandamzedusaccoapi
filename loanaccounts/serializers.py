@@ -1,0 +1,77 @@
+from rest_framework import serializers
+from django.contrib.auth import get_user_model
+
+from loanaccounts.models import LoanAccount
+from loanproducts.models import LoanProduct
+from loanapplications.models import LoanApplication
+from loandisbursements.serializers import LoanDisbursementSerializer
+from loanpayments.serializers import LoanPaymentSerializer
+
+User = get_user_model()
+
+
+class LoanAccountSerializer(serializers.ModelSerializer):
+    member = serializers.SlugRelatedField(
+        slug_field="member_no", queryset=User.objects.all()
+    )
+    product = serializers.SlugRelatedField(
+        slug_field="name", queryset=LoanProduct.objects.all()
+    )
+    application = serializers.SlugRelatedField(
+        slug_field="reference", queryset=LoanApplication.objects.all(), required=False
+    )
+    application_details = serializers.SerializerMethodField()
+    disbursements = LoanDisbursementSerializer(many=True, read_only=True)
+    loan_payments = LoanPaymentSerializer(many=True, read_only=True)
+    product_details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LoanAccount
+        fields = (
+            "member",
+            "product",
+            "application",
+            "account_number",
+            "principal",
+            "total_interest_accrued",
+            "processing_fee",
+            "total_loan_amount",
+            "outstanding_balance",
+            "total_penalties_owed",
+            "total_clearance_amount",
+            "start_date",
+            "end_date",
+            "last_interest_calulation",
+            "status",
+            "created_at",
+            "updated_at",
+            "reference",
+            "product_details",
+            "disbursements",
+            "loan_payments",
+            "projection_snapshot",
+            "application_details",
+        )
+        read_only_fields = ("total_penalties_owed", "total_clearance_amount")
+
+    def get_application_details(self, obj):
+        if obj.application:
+            return {
+                "reference": obj.application.reference,
+                "member": obj.application.member.member_no,
+                "product": obj.application.product.name,
+                "amount": obj.application.requested_amount,
+                "status": obj.application.status,
+            }
+
+    def get_product_details(self, obj):
+        return {
+            "name": obj.product.name,
+            "interest_method": obj.product.interest_method,
+            "interest_rate": obj.product.interest_rate,
+            "processing_fee_rate": obj.product.processing_fee,
+            "interest_period": obj.product.interest_period,
+            "calculation_schedule": obj.product.calculation_schedule,
+            "is_active": obj.product.is_active,
+            "reference": obj.product.reference,
+        }
