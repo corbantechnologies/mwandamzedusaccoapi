@@ -1,0 +1,29 @@
+from django.db import models
+
+from accounts.abstracts import UniversalIdModel, TimeStampedModel, ReferenceModel
+from glaccounts.models import GLAccount
+
+
+class SavingType(UniversalIdModel, TimeStampedModel, ReferenceModel):
+    name = models.CharField(max_length=255, unique=True)
+    interest_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    is_active = models.BooleanField(default=True)
+    can_guarantee = models.BooleanField(
+        default=True,
+        help_text="Can this savings account be used as collateral for a loan?",
+    )
+    gl_account = models.ForeignKey(
+        GLAccount,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="saving_types",
+    )
+
+    class Meta:
+        verbose_name = "Savings Account Type"
+        verbose_name_plural = "Savings Account Types"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.name
