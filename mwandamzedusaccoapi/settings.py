@@ -71,6 +71,9 @@ INSTALLED_APPS = [
     "feetypes",
     "feeaccounts",
     "feepayments",
+    # Transactions
+    "transactions",
+    
 ]
 
 MIDDLEWARE = [

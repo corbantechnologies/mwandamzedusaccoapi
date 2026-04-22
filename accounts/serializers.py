@@ -73,8 +73,6 @@ class BaseUserSerializer(serializers.ModelSerializer):
             "tax_pin",
             "phone",
             "county",
-            "employment_status",
-            "employment_type",
             "is_approved",
             "is_staff",
             "is_superuser",
