@@ -67,6 +67,10 @@ INSTALLED_APPS = [
     # Guarantors
     "guarantors",
     "guaranteerequests",
+    # Fees
+    "feetypes",
+    "feeaccounts",
+    "feepayments",
 ]
 
 MIDDLEWARE = [
