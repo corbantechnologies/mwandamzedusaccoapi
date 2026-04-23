@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Yearly Financial Summary</title>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+            body {
+                font-family: 'Inter', sans-serif;
+                color: #1f2937;
+                font-size: 12px;
+                padding: 20px;
+            }
+
+            .header {
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #e5e7eb;
+                padding-bottom: 20px;
+            }
+
+            .header h1 {
+                color: #111827;
+                font-size: 24px;
+                margin: 0 0 10px 0;
+                text-transform: uppercase;
+            }
+
+            .header p {
+                margin: 5px 0;
+                color: #4b5563;
+            }
+
+            .member-info {
+                background-color: #f9fafb;
+                padding: 15px;
+                border-radius: 8px;
+                margin-bottom: 30px;
+                border: 1px solid #e5e7eb;
+            }
+
+            .member-info h2 {
+                margin: 0 0 10px 0;
+                font-size: 16px;
+                color: #111827;
+            }
+
+            .member-details {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 15px;
+            }
+
+            .member-detail-item strong {
+                display: block;
+                color: #6b7280;
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 2px;
+            }
+
+            .section-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: #111827;
+                margin: 30px 0 15px 0;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 25px;
+                font-size: 11px;
+            }
+
+            th {
+                background-color: #f3f4f6;
+                color: #374151;
+                font-weight: 600;
+                text-align: left;
+                padding: 8px 12px;
+                text-transform: uppercase;
+                font-size: 10px;
+                border: 1px solid #e5e7eb;
+            }
+
+            td {
+                padding: 8px 12px;
+                border: 1px solid #e5e7eb;
+                color: #4b5563;
+                vertical-align: top;
+            }
+
+            tr:nth-child(even) {
+                background-color: #fcfcfc;
+            }
+
+            .text-right {
+                text-align: right;
+            }
+
+            .bold {
+                font-weight: 600;
+                color: #111827;
+            }
+
+            .transaction-list {
+                margin: 0;
+                padding: 0;
+                list-style: none;
+            }
+
+            .transaction-item {
+                display: flex;
+                justify-content: space-between;
+                font-size: 10px;
+                margin-bottom: 4px;
+                padding-bottom: 4px;
+                border-bottom: 1px dashed #e5e7eb;
+            }
+
+            .transaction-item:last-child {
+                border-bottom: none;
+            }
+
+            .summary-box {
+                background-color: #f3f4f6;
+                padding: 10px;
+                border-radius: 6px;
+                margin-bottom: 15px;
+            }
+
+            .grand-total-row td {
+                background-color: #f3f4f6;
+                font-weight: 700;
+                border-top: 2px solid #d1d5db;
+            }
+
+            @page {
+                size: A4;
+                margin: 1cm;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div class="header">
+            <h1>Mwanda Mzedu SACCO</h1>
+            <p>Yearly Financial Summary</p>
+            <p>Report Year: <strong>{{ year }}</strong></p>
+        </div>
+
+        <div class="member-info">
+            <div class="member-details">
+                <div class="member-detail-item">
+                    <strong>Member Name</strong>
+                    {{ member_name }}
+                </div>
+                <div class="member-detail-item">
+                    <strong>Member Number</strong>
+                    {{ member_no }}
+                </div>
+                <div class="member-detail-item">
+                    <strong>Generated On</strong>
+                    {% now "Y-m-d H:i" %}
+                </div>
+            </div>
+        </div>
+
+        <!-- SAVINGS SECTION -->
+        {% if savings %}
+        <h3 class="section-title">Savings Accounts</h3>
+        {% for acc in savings %}
+        <div style="margin-bottom: 20px;">
+            <div class="summary-box">
+                <strong>Account:</strong> {{ acc.type }} ({{ acc.account_number }}) |
+                <strong>Total Deposits ({{ year }}):</strong> {{ acc.totals.total_deposits|default:"0.00" }}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="10%">Month</th>
+                        <th width="12%" class="text-right">Opening</th>
+                        <th width="12%" class="text-right">Deposits</th>
+                        <th width="12%" class="text-right">Withdrawals</th>
+                        <th width="12%" class="text-right">Closing</th>
+                        <th width="42%">Transactions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in acc.monthly_summary %}
+                    <tr>
+                        <td>{{ m.month|slice:":3" }}</td>
+                        <td class="text-right">{{ m.opening_balance }}</td>
+                        <td class="text-right">{{ m.deposits }}</td>
+                        <td class="text-right">{{ m.withdrawals }}</td>
+                        <td class="text-right bold">{{ m.closing_balance }}</td>
+                        <td>
+                            <div class="transaction-list">
+                                {% for t in m.transactions %}
+                                <div class="transaction-item">
+                                    <span>{{ t.date|date:"d M" }} - {{ t.reference }}</span>
+                                    <span class="bold">{{ t.amount }}</span>
+                                </div>
+                                {% empty %}
+                                <span style="color: #9ca3af; font-size: 10px;">No transactions</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- VENTURES SECTION -->
+        {% if ventures %}
+        <h3 class="section-title">Venture Accounts</h3>
+        {% for acc in ventures %}
+        <div style="margin-bottom: 20px;">
+            <div class="summary-box">
+                <strong>Account:</strong> {{ acc.type }} ({{ acc.account_number }}) |
+                <strong>Deposits:</strong> {{ acc.totals.total_deposits|default:"0.00" }} |
+                <strong>Payments:</strong> {{ acc.totals.total_payments|default:"0.00" }}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="10%">Month</th>
+                        <th width="12%" class="text-right">Opening</th>
+                        <th width="12%" class="text-right">Deposits</th>
+                        <th width="12%" class="text-right">Payments</th>
+                        <th width="12%" class="text-right">Closing</th>
+                        <th width="42%">Transactions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in acc.monthly_summary %}
+                    <tr>
+                        <td>{{ m.month|slice:":3" }}</td>
+                        <td class="text-right">{{ m.opening_balance }}</td>
+                        <td class="text-right">{{ m.deposits }}</td>
+                        <td class="text-right">{{ m.payments }}</td>
+                        <td class="text-right bold">{{ m.closing_balance }}</td>
+                        <td>
+                            <div class="transaction-list">
+                                {% for t in m.transactions %}
+                                <div class="transaction-item">
+                                    <span>{{ t.date|date:"d M" }} - {{ t.type|slice:"8:" }} - {{ t.reference }}</span>
+                                    <span class="bold">{{ t.amount }}</span>
+                                </div>
+                                {% empty %}
+                                <span style="color: #9ca3af; font-size: 10px;">No transactions</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <!-- LOANS SECTION -->
+        {% if loans %}
+        <h3 class="section-title">Loan Accounts</h3>
+        {% for acc in loans %}
+        <div style="margin-bottom: 20px;">
+            <div class="summary-box">
+                <strong>Product:</strong> {{ acc.product }} ({{ acc.account_number }}) |
+                <strong>Principal:</strong> {{ acc.initial_principal }} |
+                <strong>Disbursed:</strong> {{ acc.totals.total_disbursed|default:"0.00" }} |
+                <strong>Repaid:</strong> {{ acc.totals.total_repaid|default:"0.00" }}
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="10%">Month</th>
+                        <th width="12%" class="text-right">Opening</th>
+                        <th width="12%" class="text-right">Disbursed</th>
+                        <th width="12%" class="text-right">Repaid</th>
+                        <th width="12%" class="text-right">Closing</th>
+                        <th width="42%">Transactions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in acc.monthly_summary %}
+                    <tr>
+                        <td>{{ m.month|slice:":3" }}</td>
+                        <td class="text-right">{{ m.opening_balance }}</td>
+                        <td class="text-right">{{ m.disbursed }}</td>
+                        <td class="text-right">{{ m.paid }}</td>
+                        <td class="text-right bold">{{ m.closing_balance }}</td>
+                        <td>
+                            <div class="transaction-list">
+                                {% for t in m.transactions %}
+                                <div class="transaction-item">
+                                    <span>{{ t.date|date:"d M" }} - {{ t.type|slice:"5:" }} - {{ t.reference }}</span>
+                                    <span class="bold">{{ t.amount }}</span>
+                                </div>
+                                {% empty %}
+                                <span style="color: #9ca3af; font-size: 10px;">No transactions</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+    </body>
+
+</html>

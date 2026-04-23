@@ -49,6 +49,30 @@ INSTALLED_APPS = [
     # Savings
     "savingtypes",
     "savings",
+    "savingsdeposits",
+    # Ventures
+    "venturetypes",
+    "ventureaccounts",
+    "venturedeposits",
+    "venturepayments",
+    # Loans
+    "loanproducts",
+    "loanapplications",
+    "loanaccounts",
+    "loanpayments",
+    "loandisbursements",
+    "loanpenalties",
+    "existingloans",
+    "existingloanspayments",
+    # Guarantors
+    "guarantors",
+    "guaranteerequests",
+    # Fees
+    "feetypes",
+    "feeaccounts",
+    "feepayments",
+    # Transactions
+    "transactions",
 ]
 
 MIDDLEWARE = [
@@ -84,24 +108,24 @@ CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS").split(",")
 
 AUTH_USER_MODEL = "accounts.User"
 
-ROOT_URLCONF = 'mwandamzedusaccoapi.urls'
+ROOT_URLCONF = "mwandamzedusaccoapi.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'mwandamzedusaccoapi.wsgi.application'
+WSGI_APPLICATION = "mwandamzedusaccoapi.wsgi.application"
 
 
 # Database
@@ -116,16 +140,16 @@ DATABASES = {"default": db_config}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -133,9 +157,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'Africa/Nairobi'
+TIME_ZONE = "Africa/Nairobi"
 
 USE_I18N = True
 

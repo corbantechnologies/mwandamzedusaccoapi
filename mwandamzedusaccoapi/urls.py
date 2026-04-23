@@ -1,22 +1,34 @@
-"""
-URL configuration for mwandamzedusaccoapi project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
+    path("api/v1/auth/", include("accounts.urls")),
+    path("api/v1/paymentaccounts/", include("paymentaccounts.urls")),
+    path("api/v1/savingtypes/", include("savingtypes.urls")),
+    path("api/v1/savings/", include("savings.urls")),
+    path("api/v1/savingsdeposits/", include("savingsdeposits.urls")),
+    path("api/v1/venturetypes/", include("venturetypes.urls")),
+    path("api/v1/ventureaccounts/", include("ventureaccounts.urls")),
+    path("api/v1/venturedeposits/", include("venturedeposits.urls")),
+    path("api/v1/venturepayments/", include("venturepayments.urls")),
+    path("api/v1/loanproducts/", include("loanproducts.urls")),
+    path("api/v1/loanapplications/", include("loanapplications.urls")),
+    path("api/v1/loanaccounts/", include("loanaccounts.urls")),
+    path("api/v1/loandisbursements/", include("loandisbursements.urls")),
+    path("api/v1/loanpayments/", include("loanpayments.urls")),
+    path("api/v1/loanpenalties/", include("loanpenalties.urls")),
+    path("api/v1/existingloans/", include("existingloans.urls")),
+    path("api/v1/existingloanspayments/", include("existingloanspayments.urls")),
+    path("api/v1/guarantors/", include("guarantors.urls")),
+    path("api/v1/guaranteerequests/", include("guaranteerequests.urls")),
+    path("api/v1/transactions/", include("transactions.urls")),
+    path("api/v1/mpesa/", include("mpesa.urls")),
+    path("api/v1/glaccounts/", include("glaccounts.urls")),
+    path("api/v1/journalbatches/", include("journalbatches.urls")),
+    path("api/v1/journalentries/", include("journalentries.urls")),
+    path("api/v1/feetypes/", include("feetypes.urls")),
+    path("api/v1/feeaccounts/", include("feeaccounts.urls")),
+    path("api/v1/feepayments/", include("feepayments.urls")),
+    path("api/v1/financials/", include("financials.urls")),
 ]

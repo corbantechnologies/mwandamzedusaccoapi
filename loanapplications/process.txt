@@ -1,0 +1,16 @@
+Loan Application Process
+
+1. Member applies for a loan: it is in Pending status. This allows them to see the projections and make changes. Loan also needs to tell the member if the loan is fully covered by the member's savings. Funds are not locked at this point. They just need to get an overview of the loan.
+2. After satisfaction with the projections, the member can submit the application for Amendment. It now changes to "Ready for Amendment" status.
+3. Admin sees the application in "Ready for Amendment" status and can make changes to the application. He submits it adding a note to the application. The application now changes to "Amended" status.
+4. The member can see the application in "Amended" status and can:
+    - Accept the amendment: 
+        - loan changes to "Ready for Submission" status if it is fully covered by the member's savings. Otherwise, it changes to "In Progress" status. The guarantor profile is updated as necessary.
+        - If "In Progress", the member sees the amount remaining to cover and can now apply for guarantors to cover the remaining amount. The guarantees guarantor profile is updated as necessary. Upon approval of the guarantors, the loan changes to "Ready for Submission" status.
+        - Funds are locked at this point.
+    - Cancel the application: The application changes to "Cancelled" status. The process ends here.
+5. The member can see the application in "Ready for Submission" status and can:
+    - Submit the application: The application changes to "Submitted" status.
+    - After submission, admin reviews the application and can approve it or decline it. The application changes to "Approved" or "Declined" status.
+    - Upon approval, a loan account is created awaiting disbursement.
+    - Upon decline, the guarantor profile affected are updated as necessary.

@@ -8,23 +8,36 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='PostingLog',
+            name="PostingLog",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('record', models.JSONField(blank=True, null=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                ("record", models.JSONField(blank=True, null=True)),
             ],
             options={
-                'verbose_name': 'Posting Log',
-                'verbose_name_plural': 'Posting Logs',
-                'ordering': ('-created_at',),
+                "verbose_name": "Posting Log",
+                "verbose_name_plural": "Posting Logs",
+                "ordering": ("-created_at",),
             },
         ),
     ]

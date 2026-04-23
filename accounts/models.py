@@ -60,8 +60,8 @@ class User(
     first_name = models.CharField(max_length=255)
     middle_name = models.CharField(max_length=255, blank=True, null=True)
     last_name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True)
-    gender = models.CharField(max_length=255)
+    email = models.EmailField(unique=True, blank=True, null=True)
+    gender = models.CharField(max_length=255, blank=True, null=True)
     dob = models.DateField(blank=True, null=True)
     avatar = CloudinaryField("mwanda_avatars", blank=True, null=True)
 
@@ -73,10 +73,6 @@ class User(
     # Contact & Address Details
     phone = models.CharField(max_length=255, blank=True, null=True)
     county = models.CharField(max_length=255, blank=True, null=True)
-
-    # Employment
-    employment_status = models.CharField(max_length=255, blank=True, null=True)
-    employment_type = models.CharField(max_length=255, blank=True, null=True)
 
     # Account status
     is_approved = models.BooleanField(default=False)

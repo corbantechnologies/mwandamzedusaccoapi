@@ -317,12 +317,10 @@ class BulkMemberUploadCSVTemplateView(APIView):
             [
                 "first_name",
                 "last_name",
+                "middle_name",
                 "member_no",
                 "email",
                 "gender",
-                "phone",
-                "payroll_number",
-                "employer",
             ]
         )
 

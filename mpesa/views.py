@@ -22,7 +22,6 @@ from loanpayments.models import LoanPayment
 from loanaccounts.models import LoanAccount
 from loanpayments.utils import send_loan_payment_pending_update_email
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -310,7 +309,7 @@ class LoanPaymentMpesaCreateView(APIView):
                     {"error": "No phone number provided"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            
+
             loan_payment = LoanPayment.objects.get(reference=loan_payment_reference)
             if loan_payment.payment_status == "COMPLETED":
                 logger.error("Loan payment already completed")
@@ -325,7 +324,6 @@ class LoanPaymentMpesaCreateView(APIView):
                     {"error": "Loan payment is not pending"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            
 
             # validate M-Pesa Credentials
             if not all(
@@ -355,7 +353,6 @@ class LoanPaymentMpesaCreateView(APIView):
                     {"error": f"Authentication failed: {str(e)}"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
-
 
             # Prepare STK Push Payload
 
@@ -394,7 +391,9 @@ class LoanPaymentMpesaCreateView(APIView):
 
                 if response_data.get("ResponseCode") == "0":
                     # SUCCESS
-                    loan_payment.checkout_request_id = response_data.get("CheckoutRequestID")
+                    loan_payment.checkout_request_id = response_data.get(
+                        "CheckoutRequestID"
+                    )
                     loan_payment.callback_url = settings.MPESA_LOAN_CALLBACK_URL
                     loan_payment.repayment_type = "Mpesa STK Push"
                     loan_payment.mpesa_phone_number = phone_number
@@ -402,9 +401,15 @@ class LoanPaymentMpesaCreateView(APIView):
 
                     return Response(
                         {
-                            "merchant_request_id": response_data.get("MerchantRequestID"),
-                            "checkout_request_id": response_data.get("CheckoutRequestID"),
-                            "response_description": response_data.get("ResponseDescription"),
+                            "merchant_request_id": response_data.get(
+                                "MerchantRequestID"
+                            ),
+                            "checkout_request_id": response_data.get(
+                                "CheckoutRequestID"
+                            ),
+                            "response_description": response_data.get(
+                                "ResponseDescription"
+                            ),
                             "customer_message": response_data.get("CustomerMessage"),
                         },
                         status=status.HTTP_200_OK,
@@ -427,7 +432,7 @@ class LoanPaymentMpesaCreateView(APIView):
                     {"error": "STK Push request failed"},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
-                
+
         except LoanPayment.DoesNotExist:
             logger.error("Loan payment not found")
             return Response(
@@ -441,7 +446,7 @@ class LoanPaymentMpesaCreateView(APIView):
                 {"error": "STK Push request failed"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-            
+
 
 class LoanMpesaCallbackView(APIView):
     permission_classes = [AllowAny]
@@ -500,7 +505,7 @@ class LoanMpesaCallbackView(APIView):
                 {"ResultCode": 0, "ResultDesc": "Loan payment failed"},
                 status=status.HTTP_200_OK,
             )
-        
+
         metadata_items = stk_callback.get("CallbackMetadata", {}).get("Item", [])
 
         confirmation_code = next(
@@ -531,7 +536,9 @@ class LoanMpesaCallbackView(APIView):
         loan_payment.save()
 
         # send email to member
-        send_loan_payment_pending_update_email(loan_payment.loan_account.member, loan_payment)
+        send_loan_payment_pending_update_email(
+            loan_payment.loan_account.member, loan_payment
+        )
 
         logger.info("Loan payment processed successfully")
         return Response(
@@ -539,12 +546,8 @@ class LoanMpesaCallbackView(APIView):
             status=status.HTTP_200_OK,
         )
 
-
     def get(self, request, *args, **kwargs):
         """Endpoint to view all saved callback bodies (for debugging)"""
         bodies = LoanPayment.objects.all().order_by("-id")
         serializer = LoanPaymentSerializer(bodies, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-

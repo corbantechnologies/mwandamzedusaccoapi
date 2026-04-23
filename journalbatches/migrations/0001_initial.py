@@ -10,26 +10,50 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='JournalBatch',
+            name="JournalBatch",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('description', models.CharField(max_length=5000)),
-                ('code', models.CharField(default=journalbatches.utils.generate_journal_batch_code, editable=False, max_length=20, unique=True)),
-                ('posted', models.BooleanField(default=False)),
-                ('posting_date', models.DateField(db_index=True, default=django.utils.timezone.now)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                ("description", models.CharField(max_length=5000)),
+                (
+                    "code",
+                    models.CharField(
+                        default=journalbatches.utils.generate_journal_batch_code,
+                        editable=False,
+                        max_length=20,
+                        unique=True,
+                    ),
+                ),
+                ("posted", models.BooleanField(default=False)),
+                (
+                    "posting_date",
+                    models.DateField(db_index=True, default=django.utils.timezone.now),
+                ),
             ],
             options={
-                'verbose_name': 'Journal Batch',
-                'verbose_name_plural': 'Journal Batches',
-                'ordering': ['-created_at'],
+                "verbose_name": "Journal Batch",
+                "verbose_name_plural": "Journal Batches",
+                "ordering": ["-created_at"],
             },
         ),
     ]

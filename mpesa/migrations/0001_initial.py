@@ -8,23 +8,36 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='MpesaBody',
+            name="MpesaBody",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('body', models.JSONField()),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                ("body", models.JSONField()),
             ],
             options={
-                'verbose_name': 'M-Pesa Body',
-                'verbose_name_plural': 'M-Pesa Bodies',
-                'ordering': ['-created_at'],
+                "verbose_name": "M-Pesa Body",
+                "verbose_name_plural": "M-Pesa Bodies",
+                "ordering": ["-created_at"],
             },
         ),
     ]

@@ -28,6 +28,7 @@ class TrialBalanceView(APIView):
     Query params:
         as_of_date (optional): YYYY-MM-DD  — defaults to today
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -49,6 +50,7 @@ class BalanceSheetView(APIView):
     Query params:
         as_of_date (optional): YYYY-MM-DD  — defaults to today
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -71,6 +73,7 @@ class PnLStatementView(APIView):
         start_date: YYYY-MM-DD
         end_date:   YYYY-MM-DD
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -107,6 +110,7 @@ class CashBalanceView(APIView):
     Query params:
         as_of_date (optional): YYYY-MM-DD  — defaults to today
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request):

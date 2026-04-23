@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <title>Guarantee Request Update</title>
+        <style>
+            body {
+                font-family: 'Helvetica Neue', Arial, sans-serif;
+                background-color: #f8f9fa;
+                margin: 0;
+                padding: 0;
+                color: #2d3748;
+            }
+
+            .container {
+                max-width: 640px;
+                margin: 30px auto;
+                background: #ffffff;
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+
+            .header {
+                background: linear-gradient(135deg, #ed3636, #b80505);
+                color: #ffffff;
+                text-align: center;
+                padding: 30px 20px;
+            }
+
+            .header h2 {
+                margin: 0;
+                font-size: 28px;
+                font-weight: 600;
+            }
+
+            .content {
+                padding: 30px;
+                line-height: 1.8;
+            }
+
+            .content p {
+                margin: 0 0 15px;
+            }
+
+            .highlight-box {
+                font-size: 18px;
+                color: #2d3748;
+                font-weight: bold;
+                text-align: center;
+                margin: 25px 0;
+                padding: 15px;
+                background-color: #fef5e7;
+                border-radius: 8px;
+            }
+
+            .footer {
+                text-align: center;
+                background-color: #edf2f7;
+                color: #718096;
+                padding: 15px;
+                font-size: 13px;
+                border-top: 1px solid #e2e8f0;
+            }
+        </style>
+    </head>
+
+    <body style="font-family: 'Helvetica Neue', Arial, sans-serif; line-height: 1.8; color: #2d3748;">
+        <div class="container">
+            <div class="header">
+                <h2>Guarantee Request Update</h2>
+            </div>
+            <div class="content">
+                <p>Hello {{ member.first_name }},</p>
+                <p>Your guarantee request to <strong>{{ guarantor_name }}</strong> has been updated.</p>
+
+                <div class="highlight-box">
+                    Status: {{ status }}<br>
+                    Amount: KES {{ amount }}
+                </div>
+
+                {% if status == 'Accepted' %}
+                <p>This amount has been added to your loan coverage. You can check your application status on the
+                    portal.</p>
+                {% else %}
+                <p>Please consider requesting another guarantor or increasing your self-guarantee if possible.</p>
+                {% endif %}
+
+            </div>
+            <div class="footer">
+                <p>&copy; {{ current_year }} Mwanda Mzedu SACCO. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+
+</html>

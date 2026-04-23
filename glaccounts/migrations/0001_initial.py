@@ -8,29 +8,75 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='GLAccount',
+            name="GLAccount",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('name', models.CharField(max_length=2505, unique=True)),
-                ('code', models.CharField(help_text='Ensure utmost care when setting this code as it will be used for all transactions.', max_length=20, unique=True)),
-                ('category', models.CharField(choices=[('ASSET', 'Asset'), ('LIABILITY', 'Liability'), ('EQUITY', 'Equity'), ('REVENUE', 'Revenue'), ('EXPENSE', 'Expense')], max_length=20)),
-                ('balance', models.DecimalField(decimal_places=2, default=0.0, max_digits=15)),
-                ('is_active', models.BooleanField(default=True)),
-                ('is_current_account', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                ("name", models.CharField(max_length=2505, unique=True)),
+                (
+                    "code",
+                    models.CharField(
+                        help_text="Ensure utmost care when setting this code as it will be used for all transactions.",
+                        max_length=20,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("ASSET", "Asset"),
+                            ("LIABILITY", "Liability"),
+                            ("EQUITY", "Equity"),
+                            ("REVENUE", "Revenue"),
+                            ("EXPENSE", "Expense"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "balance",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=15),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                ("is_current_account", models.BooleanField(default=True)),
             ],
             options={
-                'verbose_name': 'General Ledger Account',
-                'verbose_name_plural': 'General Ledger Accounts',
-                'ordering': ['code'],
-                'indexes': [models.Index(fields=['code'], name='glaccounts__code_87d0c4_idx'), models.Index(fields=['category'], name='glaccounts__categor_0f6e79_idx'), models.Index(fields=['is_active'], name='glaccounts__is_acti_60ff99_idx'), models.Index(fields=['balance'], name='glaccounts__balance_8d51f4_idx')],
+                "verbose_name": "General Ledger Account",
+                "verbose_name_plural": "General Ledger Accounts",
+                "ordering": ["code"],
+                "indexes": [
+                    models.Index(fields=["code"], name="glaccounts__code_87d0c4_idx"),
+                    models.Index(
+                        fields=["category"], name="glaccounts__categor_0f6e79_idx"
+                    ),
+                    models.Index(
+                        fields=["is_active"], name="glaccounts__is_acti_60ff99_idx"
+                    ),
+                    models.Index(
+                        fields=["balance"], name="glaccounts__balance_8d51f4_idx"
+                    ),
+                ],
             },
         ),
     ]
