@@ -20,6 +20,7 @@ CR_NORMAL_CATEGORIES = {"LIABILITY", "EQUITY", "REVENUE"}
 # Internal helpers
 # ---------------------------------------------------------
 
+
 def _net_balance(account, as_of_date=None, start_date=None, end_date=None):
     """
     Compute the net balance for a single GL account from journal entries.
@@ -65,6 +66,7 @@ def _account_row(account, balance):
 # 1. Trial Balance
 # ---------------------------------------------------------
 
+
 def get_trial_balance(as_of_date=None):
     """
     Returns the trial balance as of a given date (defaults to today).
@@ -95,13 +97,15 @@ def get_trial_balance(as_of_date=None):
         if total_dr == 0 and total_cr == 0:
             continue  # Skip dormant accounts
 
-        rows.append({
-            "code": account.code,
-            "name": account.name,
-            "category": account.category,
-            "total_debit": total_dr,
-            "total_credit": total_cr,
-        })
+        rows.append(
+            {
+                "code": account.code,
+                "name": account.name,
+                "category": account.category,
+                "total_debit": total_dr,
+                "total_credit": total_cr,
+            }
+        )
 
         grand_dr += total_dr
         grand_cr += total_cr
@@ -121,6 +125,7 @@ def get_trial_balance(as_of_date=None):
 # ---------------------------------------------------------
 # 2. Balance Sheet
 # ---------------------------------------------------------
+
 
 def get_balance_sheet(as_of_date=None):
     """
@@ -193,8 +198,10 @@ def get_balance_sheet(as_of_date=None):
         },
         "totals": {
             "total_assets": total_assets,
-            "total_liabilities_and_equity": total_liabilities + total_equity_including_income,
-            "is_balanced": total_assets == (total_liabilities + total_equity_including_income),
+            "total_liabilities_and_equity": total_liabilities
+            + total_equity_including_income,
+            "is_balanced": total_assets
+            == (total_liabilities + total_equity_including_income),
         },
     }
 
@@ -202,6 +209,7 @@ def get_balance_sheet(as_of_date=None):
 # ---------------------------------------------------------
 # 3. Profit & Loss Statement
 # ---------------------------------------------------------
+
 
 def get_pnl_statement(start_date=None, end_date=None):
     """
@@ -257,6 +265,7 @@ def get_pnl_statement(start_date=None, end_date=None):
 # ---------------------------------------------------------
 # 4. Cash Balance
 # ---------------------------------------------------------
+
 
 def get_cash_balances(as_of_date=None):
     """

@@ -6,7 +6,6 @@ from financials.services import post_to_ledger
 from guarantors.services import update_guarantees_on_repayment
 from loanpenalties.models import LoanPenalty
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -4,7 +4,11 @@ from existingloanspayments import views
 app_name = "existingloanspayments"
 
 urlpatterns = [
-    path("", views.ExistingLoanPaymentCreateView.as_view(), name="existing-loan-payment-create"),
+    path(
+        "",
+        views.ExistingLoanPaymentCreateView.as_view(),
+        name="existing-loan-payment-create",
+    ),
     path(
         "bulk/template/",
         views.ExistingLoanPaymentTemplateDownloadView.as_view(),

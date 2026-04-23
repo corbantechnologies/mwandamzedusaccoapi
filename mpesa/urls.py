@@ -1,5 +1,10 @@
 from django.urls import path
-from mpesa.views import MpesaPaymentCreateView, MpesaCallbackView, LoanPaymentMpesaCreateView, LoanMpesaCallbackView
+from mpesa.views import (
+    MpesaPaymentCreateView,
+    MpesaCallbackView,
+    LoanPaymentMpesaCreateView,
+    LoanMpesaCallbackView,
+)
 
 app_name = "mpesa"
 

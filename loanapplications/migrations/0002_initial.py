@@ -9,14 +9,18 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('loanapplications', '0001_initial'),
-        ('loanproducts', '0001_initial'),
+        ("loanapplications", "0001_initial"),
+        ("loanproducts", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='loanapplication',
-            name='product',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='applications', to='loanproducts.loanproduct'),
+            model_name="loanapplication",
+            name="product",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="applications",
+                to="loanproducts.loanproduct",
+            ),
         ),
     ]

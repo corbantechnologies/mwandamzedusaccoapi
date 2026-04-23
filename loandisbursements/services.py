@@ -65,7 +65,12 @@ def process_loan_disbursement_accounting(disbursement):
                     {"account": bank_gl, "debit": 0, "credit": disbursement.amount},
                 ]
 
-                post_to_ledger(description, disbursement.reference, entries, posting_date=disbursement.created_at.date())
+                post_to_ledger(
+                    description,
+                    disbursement.reference,
+                    entries,
+                    posting_date=disbursement.created_at.date(),
+                )
                 disbursement.posted_to_gl = True
 
             # 3. Finalize Disbursement Flags

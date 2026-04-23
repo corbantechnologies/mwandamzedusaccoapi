@@ -184,8 +184,7 @@ class BulkJournalBatchUploadView(generics.CreateAPIView):
                 # 2. Save Batch and Entries Atomically
                 with transaction.atomic():
                     batch = JournalBatch.objects.create(
-                        description=bdata["description"],
-                        posted=True
+                        description=bdata["description"], posted=True
                     )
 
                     for e in bdata["entries"]:
@@ -285,7 +284,7 @@ class BulkJournalBatchCreateView(generics.CreateAPIView):
                         batch = JournalBatch.objects.create(
                             description=v_data.get("description", "JSON Bulk Batch"),
                             reference=v_data.get("reference"),
-                            posted=True
+                            posted=True,
                         )
                         for e in entries:
                             JournalEntry.objects.create(

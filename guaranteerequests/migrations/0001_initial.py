@@ -11,31 +11,83 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('guarantors', '0001_initial'),
-        ('loanapplications', '0002_initial'),
+        ("guarantors", "0001_initial"),
+        ("loanapplications", "0002_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='GuaranteeRequest',
+            name="GuaranteeRequest",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('guaranteed_amount', models.DecimalField(blank=True, decimal_places=2, max_digits=15, null=True)),
-                ('status', models.CharField(choices=[('Pending', 'Pending'), ('Accepted', 'Accepted'), ('Declined', 'Declined'), ('Cancelled', 'Cancelled')], default='Pending', max_length=25)),
-                ('notes', models.TextField(blank=True, null=True)),
-                ('guarantor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='guarantees', to='guarantors.guarantorprofile')),
-                ('loan_application', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='guarantors', to='loanapplications.loanapplication')),
-                ('member', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='guarantor_requests', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                (
+                    "guaranteed_amount",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=15, null=True
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("Pending", "Pending"),
+                            ("Accepted", "Accepted"),
+                            ("Declined", "Declined"),
+                            ("Cancelled", "Cancelled"),
+                        ],
+                        default="Pending",
+                        max_length=25,
+                    ),
+                ),
+                ("notes", models.TextField(blank=True, null=True)),
+                (
+                    "guarantor",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="guarantees",
+                        to="guarantors.guarantorprofile",
+                    ),
+                ),
+                (
+                    "loan_application",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="guarantors",
+                        to="loanapplications.loanapplication",
+                    ),
+                ),
+                (
+                    "member",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="guarantor_requests",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Guarantee Request',
-                'verbose_name_plural': 'Guarantee Requests',
-                'ordering': ['-created_at'],
-                'unique_together': {('loan_application', 'guarantor')},
+                "verbose_name": "Guarantee Request",
+                "verbose_name_plural": "Guarantee Requests",
+                "ordering": ["-created_at"],
+                "unique_together": {("loan_application", "guarantor")},
             },
         ),
     ]

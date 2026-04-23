@@ -64,7 +64,12 @@ def process_fee_payment_accounting(payment):
                 ]
 
                 # post_to_ledger handles the zero-check globally
-                post_to_ledger(description, payment.reference, entries, posting_date=payment.created_at.date())
+                post_to_ledger(
+                    description,
+                    payment.reference,
+                    entries,
+                    posting_date=payment.created_at.date(),
+                )
                 payment.posted_to_gl = True
 
             # 3. Finalize

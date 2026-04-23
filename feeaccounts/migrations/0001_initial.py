@@ -9,26 +9,52 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='FeeAccount',
+            name="FeeAccount",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('account_number', models.CharField(default=feeaccounts.utils.generate_fee_account_number, max_length=20, unique=True)),
-                ('amount_paid', models.DecimalField(decimal_places=2, default=0, max_digits=15)),
-                ('outstanding_balance', models.DecimalField(decimal_places=2, max_digits=15)),
-                ('is_paid', models.BooleanField(default=False)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                (
+                    "account_number",
+                    models.CharField(
+                        default=feeaccounts.utils.generate_fee_account_number,
+                        max_length=20,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "amount_paid",
+                    models.DecimalField(decimal_places=2, default=0, max_digits=15),
+                ),
+                (
+                    "outstanding_balance",
+                    models.DecimalField(decimal_places=2, max_digits=15),
+                ),
+                ("is_paid", models.BooleanField(default=False)),
             ],
             options={
-                'verbose_name': 'Fee Account',
-                'verbose_name_plural': 'Fee Accounts',
-                'ordering': ['-created_at'],
+                "verbose_name": "Fee Account",
+                "verbose_name_plural": "Fee Accounts",
+                "ordering": ["-created_at"],
             },
         ),
     ]

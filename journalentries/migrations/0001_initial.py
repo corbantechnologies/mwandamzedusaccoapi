@@ -12,31 +12,91 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('glaccounts', '0001_initial'),
-        ('journalbatches', '0001_initial'),
+        ("glaccounts", "0001_initial"),
+        ("journalbatches", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='JournalEntry',
+            name="JournalEntry",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('debit', models.DecimalField(decimal_places=2, default=0.0, max_digits=15)),
-                ('credit', models.DecimalField(decimal_places=2, default=0.0, max_digits=15)),
-                ('code', models.CharField(default=journalentries.utils.generate_journal_entry_code, editable=False, max_length=20, unique=True)),
-                ('account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='entries', to='glaccounts.glaccount')),
-                ('batch', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='entries', to='journalbatches.journalbatch')),
-                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='journal_entries', to=settings.AUTH_USER_MODEL)),
-                ('updated_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='updated_journal_entries', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                (
+                    "debit",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=15),
+                ),
+                (
+                    "credit",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=15),
+                ),
+                (
+                    "code",
+                    models.CharField(
+                        default=journalentries.utils.generate_journal_entry_code,
+                        editable=False,
+                        max_length=20,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "account",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="entries",
+                        to="glaccounts.glaccount",
+                    ),
+                ),
+                (
+                    "batch",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="entries",
+                        to="journalbatches.journalbatch",
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="journal_entries",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "updated_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="updated_journal_entries",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Journal Entry',
-                'verbose_name_plural': 'Journal Entries',
-                'ordering': ['-created_at'],
+                "verbose_name": "Journal Entry",
+                "verbose_name_plural": "Journal Entries",
+                "ordering": ["-created_at"],
             },
         ),
     ]

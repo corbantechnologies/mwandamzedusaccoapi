@@ -12,31 +12,90 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('paymentaccounts', '0001_initial'),
-        ('ventureaccounts', '0001_initial'),
+        ("paymentaccounts", "0001_initial"),
+        ("ventureaccounts", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='VentureDeposit',
+            name="VentureDeposit",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=12, validators=[django.core.validators.MinValueValidator(0.01)])),
-                ('currency', models.CharField(default='KES', max_length=3)),
-                ('identity', models.CharField(blank=True, max_length=200, null=True, unique=True)),
-                ('deposited_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='venture_deposits', to=settings.AUTH_USER_MODEL)),
-                ('payment_method', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='venture_deposits', to='paymentaccounts.paymentaccount')),
-                ('venture_account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='deposits', to='ventureaccounts.ventureaccount')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                (
+                    "amount",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=12,
+                        validators=[django.core.validators.MinValueValidator(0.01)],
+                    ),
+                ),
+                ("currency", models.CharField(default="KES", max_length=3)),
+                (
+                    "identity",
+                    models.CharField(
+                        blank=True, max_length=200, null=True, unique=True
+                    ),
+                ),
+                (
+                    "deposited_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="venture_deposits",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "payment_method",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="venture_deposits",
+                        to="paymentaccounts.paymentaccount",
+                    ),
+                ),
+                (
+                    "venture_account",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="deposits",
+                        to="ventureaccounts.ventureaccount",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Venture Deposit',
-                'verbose_name_plural': 'Venture Deposits',
-                'ordering': ['-created_at'],
-                'indexes': [models.Index(fields=['venture_account', 'created_at'], name='venturedepo_venture_b0bd1b_idx'), models.Index(fields=['reference'], name='venturedepo_referen_6865fe_idx')],
+                "verbose_name": "Venture Deposit",
+                "verbose_name_plural": "Venture Deposits",
+                "ordering": ["-created_at"],
+                "indexes": [
+                    models.Index(
+                        fields=["venture_account", "created_at"],
+                        name="venturedepo_venture_b0bd1b_idx",
+                    ),
+                    models.Index(
+                        fields=["reference"], name="venturedepo_referen_6865fe_idx"
+                    ),
+                ],
             },
         ),
     ]

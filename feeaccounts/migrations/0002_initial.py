@@ -10,20 +10,28 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('feeaccounts', '0001_initial'),
-        ('feetypes', '0001_initial'),
+        ("feeaccounts", "0001_initial"),
+        ("feetypes", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='feeaccount',
-            name='fee_type',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='fee_accounts', to='feetypes.feetype'),
+            model_name="feeaccount",
+            name="fee_type",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="fee_accounts",
+                to="feetypes.feetype",
+            ),
         ),
         migrations.AddField(
-            model_name='feeaccount',
-            name='member',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='fee_accounts', to=settings.AUTH_USER_MODEL),
+            model_name="feeaccount",
+            name="member",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="fee_accounts",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

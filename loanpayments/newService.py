@@ -387,7 +387,12 @@ def process_loan_repayment_accounting(payment):
                     description += f" [{target_code}]"
                 description += f": {loan_acc.account_number}"
 
-                post_to_ledger(description, payment.reference, entries, posting_date=payment.payment_date.date())
+                post_to_ledger(
+                    description,
+                    payment.reference,
+                    entries,
+                    posting_date=payment.payment_date.date(),
+                )
                 payment.posted_to_gl = True
 
             payment.accounting_error = None

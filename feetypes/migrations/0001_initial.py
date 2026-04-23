@@ -10,28 +10,55 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('glaccounts', '0001_initial'),
+        ("glaccounts", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='FeeType',
+            name="FeeType",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('name', models.CharField(max_length=255, unique=True)),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=15)),
-                ('is_everyone', models.BooleanField(default=False, help_text='Apply to everyone')),
-                ('can_exceed_limit', models.BooleanField(default=False, help_text='Can exceed limit')),
-                ('is_active', models.BooleanField(default=True)),
-                ('gl_account', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='fee_types', to='glaccounts.glaccount')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("amount", models.DecimalField(decimal_places=2, max_digits=15)),
+                (
+                    "is_everyone",
+                    models.BooleanField(default=False, help_text="Apply to everyone"),
+                ),
+                (
+                    "can_exceed_limit",
+                    models.BooleanField(default=False, help_text="Can exceed limit"),
+                ),
+                ("is_active", models.BooleanField(default=True)),
+                (
+                    "gl_account",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="fee_types",
+                        to="glaccounts.glaccount",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Fee Type',
-                'verbose_name_plural': 'Fee Types',
-                'ordering': ['-created_at'],
+                "verbose_name": "Fee Type",
+                "verbose_name_plural": "Fee Types",
+                "ordering": ["-created_at"],
             },
         ),
     ]

@@ -70,6 +70,7 @@ Bulk Transactions:
 - With file upload (CSV)
 """
 
+
 class BulkSavingsDepositView(generics.CreateAPIView):
     serializer_class = BulkSavingsDepositSerializer
     permission_classes = [IsSystemAdminOrReadOnly]

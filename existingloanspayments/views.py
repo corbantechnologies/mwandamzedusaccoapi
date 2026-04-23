@@ -59,10 +59,14 @@ class ExistingLoanPaymentTemplateDownloadView(APIView):
 
     def get(self, request, *args, **kwargs):
         response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="existing_loan_payments_bulk_template.csv"'
+        response["Content-Disposition"] = (
+            'attachment; filename="existing_loan_payments_bulk_template.csv"'
+        )
 
         writer = csv.writer(response)
-        writer.writerow(["Loan Account No", "Repayment Type", "Amount", "Payment Method"])
+        writer.writerow(
+            ["Loan Account No", "Repayment Type", "Amount", "Payment Method"]
+        )
         return response
 
 
@@ -75,14 +79,19 @@ class BulkExistingLoanPaymentUploadView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         file = request.FILES.get("file")
         if not file:
-            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             csv_content = file.read().decode("utf-8")
             csv_file = io.StringIO(csv_content)
             reader = csv.DictReader(csv_file)
         except Exception as e:
-            return Response({"error": f"Invalid CSV file: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Invalid CSV file: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         admin = request.user
         today = date.today()
@@ -125,21 +134,26 @@ class BulkExistingLoanPaymentUploadView(generics.CreateAPIView):
                         "amount": amount,
                         "payment_method": pmethod,
                         "repayment_type": rtype,
-                        "transaction_status": "Completed"
+                        "transaction_status": "Completed",
                     }
 
                     # Use serializer to resolve slugs but create manually to avoid double-validation
                     temp_serializer = ExistingLoanPaymentSerializer(data=row_data)
                     if temp_serializer.is_valid():
                         instance = ExistingLoanPayment.objects.create(
-                            **temp_serializer.validated_data,
-                            paid_by=admin
+                            **temp_serializer.validated_data, paid_by=admin
                         )
                         process_existing_loan_payment_accounting(instance)
                         success_count += 1
                     else:
                         error_count += 1
-                        errors.append({"row": index, "loan": loan_acc, "error": str(temp_serializer.errors)})
+                        errors.append(
+                            {
+                                "row": index,
+                                "loan": loan_acc,
+                                "error": str(temp_serializer.errors),
+                            }
+                        )
                 except Exception as e:
                     error_count += 1
                     errors.append({"row": index, "error": str(e)})
@@ -148,13 +162,20 @@ class BulkExistingLoanPaymentUploadView(generics.CreateAPIView):
             log.error_count = error_count
             log.save()
 
-        return Response({
-            "success_count": success_count,
-            "error_count": error_count,
-            "errors": errors,
-            "log_reference": log.reference_prefix,
-            "cloudinary_url": log.cloudinary_url
-        }, status=status.HTTP_201_CREATED if success_count > 0 else status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "success_count": success_count,
+                "error_count": error_count,
+                "errors": errors,
+                "log_reference": log.reference_prefix,
+                "cloudinary_url": log.cloudinary_url,
+            },
+            status=(
+                status.HTTP_201_CREATED
+                if success_count > 0
+                else status.HTTP_400_BAD_REQUEST
+            ),
+        )
 
 
 class BulkExistingLoanPaymentCreateView(generics.CreateAPIView):
@@ -172,7 +193,7 @@ class BulkExistingLoanPaymentCreateView(generics.CreateAPIView):
         log = BulkTransactionLog.objects.create(
             admin=admin,
             transaction_type="Existing Loan Payments Bulk JSON",
-            reference_prefix=prefix
+            reference_prefix=prefix,
         )
 
         success_count = 0
@@ -184,8 +205,7 @@ class BulkExistingLoanPaymentCreateView(generics.CreateAPIView):
                 try:
                     payment_data["transaction_status"] = "Completed"
                     instance = ExistingLoanPayment.objects.create(
-                        **payment_data,
-                        paid_by=admin
+                        **payment_data, paid_by=admin
                     )
                     process_existing_loan_payment_accounting(instance)
                     success_count += 1
@@ -204,7 +224,14 @@ class BulkExistingLoanPaymentCreateView(generics.CreateAPIView):
             "log_reference": log.reference_prefix,
         }
 
-        return Response(response_data, status=status.HTTP_201_CREATED if success_count > 0 else status.HTTP_400_BAD_REQUEST)
+        return Response(
+            response_data,
+            status=(
+                status.HTTP_201_CREATED
+                if success_count > 0
+                else status.HTTP_400_BAD_REQUEST
+            ),
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

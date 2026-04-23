@@ -12,30 +12,94 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('loanaccounts', '0001_initial'),
+        ("loanaccounts", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='LoanPenalty',
+            name="LoanPenalty",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('reference', models.CharField(blank=True, max_length=255, null=True, unique=True)),
-                ('installment_code', models.CharField(max_length=50)),
-                ('amount', models.DecimalField(blank=True, decimal_places=2, help_text='Original penalty amount (0% of the total installment due)', max_digits=10, null=True)),
-                ('amount_paid', models.DecimalField(decimal_places=2, default=0, help_text='Cumulative amount paid toward this penalty. Updated by the payment service.', max_digits=10)),
-                ('status', models.CharField(choices=[('Pending', 'Pending'), ('Paid', 'Paid'), ('Waived', 'Waived')], default='Pending', max_length=20)),
-                ('penalty_code', models.CharField(default=loanpenalties.utils.generate_penalty_code, editable=False, max_length=50, unique=True)),
-                ('charged_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='penalties_charged', to=settings.AUTH_USER_MODEL)),
-                ('loan_account', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='penalties', to='loanaccounts.loanaccount')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "reference",
+                    models.CharField(
+                        blank=True, max_length=255, null=True, unique=True
+                    ),
+                ),
+                ("installment_code", models.CharField(max_length=50)),
+                (
+                    "amount",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        help_text="Original penalty amount (0% of the total installment due)",
+                        max_digits=10,
+                        null=True,
+                    ),
+                ),
+                (
+                    "amount_paid",
+                    models.DecimalField(
+                        decimal_places=2,
+                        default=0,
+                        help_text="Cumulative amount paid toward this penalty. Updated by the payment service.",
+                        max_digits=10,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("Pending", "Pending"),
+                            ("Paid", "Paid"),
+                            ("Waived", "Waived"),
+                        ],
+                        default="Pending",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "penalty_code",
+                    models.CharField(
+                        default=loanpenalties.utils.generate_penalty_code,
+                        editable=False,
+                        max_length=50,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "charged_by",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="penalties_charged",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "loan_account",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="penalties",
+                        to="loanaccounts.loanaccount",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Loan Penalty',
-                'verbose_name_plural': 'Loan Penalties',
-                'ordering': ['-created_at'],
+                "verbose_name": "Loan Penalty",
+                "verbose_name_plural": "Loan Penalties",
+                "ordering": ["-created_at"],
             },
         ),
     ]

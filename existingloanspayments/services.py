@@ -3,6 +3,7 @@ Existing Loan Payment Services
 This is very simple, we just need to update the existing loan balance
 We also need to post to the general ledger
 """
+
 import logging
 from decimal import Decimal
 from django.db import transaction

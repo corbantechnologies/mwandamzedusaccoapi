@@ -64,7 +64,12 @@ def process_savings_deposit_accounting(deposit):
                     },  # Increase Liability
                 ]
 
-                post_to_ledger(description, deposit.reference, entries, posting_date=deposit.created_at.date())
+                post_to_ledger(
+                    description,
+                    deposit.reference,
+                    entries,
+                    posting_date=deposit.created_at.date(),
+                )
                 deposit.posted_to_gl = True
 
             # 5. Finalize Flags and Clear previous errors on success

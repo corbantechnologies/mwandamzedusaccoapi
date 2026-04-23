@@ -44,7 +44,9 @@ class LoanApplicationListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         is_admin = self.request.user.is_staff or self.request.user.is_sacco_admin
-        serializer.save(member=self.request.user, status="Pending", admin_created=is_admin)
+        serializer.save(
+            member=self.request.user, status="Pending", admin_created=is_admin
+        )
 
     def get_queryset(self):
         # is_sacco_admin sees all
@@ -429,22 +431,29 @@ class AdminLoanApplicationTemplateDownloadView(generics.GenericAPIView):
         )
 
         from django.contrib.auth import get_user_model
+
         User = get_user_model()
-        members = User.objects.filter(is_member=True, is_active=True).order_by("member_no")
+        members = User.objects.filter(is_member=True, is_active=True).order_by(
+            "member_no"
+        )
 
         for member in members:
-            parts = filter(None, [member.first_name, member.middle_name, member.last_name])
+            parts = filter(
+                None, [member.first_name, member.middle_name, member.last_name]
+            )
             full_name = " ".join(parts).strip()
-            writer.writerow([
-                member.member_no,
-                full_name,
-                "", # Product Name
-                "", # Requested Amount
-                "", # Calculation Mode
-                "", # Term Months
-                "", # Monthly Payment
-                "", # Start Date
-            ])
+            writer.writerow(
+                [
+                    member.member_no,
+                    full_name,
+                    "",  # Product Name
+                    "",  # Requested Amount
+                    "",  # Calculation Mode
+                    "",  # Term Months
+                    "",  # Monthly Payment
+                    "",  # Start Date
+                ]
+            )
 
         return response
 
@@ -475,13 +484,21 @@ class BulkAdminLoanApplicationUploadView(generics.GenericAPIView):
             # Upload to Cloudinary for audit
             buffer = io.StringIO(csv_content)
             upload_result = cloudinary.uploader.upload(
-                buffer, resource_type="raw", folder="bulk_onboarding/loans", format="csv"
+                buffer,
+                resource_type="raw",
+                folder="bulk_onboarding/loans",
+                format="csv",
             )
             cloudinary_url = upload_result.get("secure_url", "")
 
             required_cols = [
-                "Member No", "Product Name", "Requested Amount", "Calculation Mode",
-                "Term Months", "Monthly Payment", "Start Date"
+                "Member No",
+                "Product Name",
+                "Requested Amount",
+                "Calculation Mode",
+                "Term Months",
+                "Monthly Payment",
+                "Start Date",
             ]
             if not reader.fieldnames:
                 return Response(
@@ -512,7 +529,9 @@ class BulkAdminLoanApplicationUploadView(generics.GenericAPIView):
                     with transaction.atomic():
                         # Extract strings carefully for possible empty cells
                         term_months_str = str(row.get("Term Months", "")).strip()
-                        monthly_payment_str = str(row.get("Monthly Payment", "")).strip()
+                        monthly_payment_str = str(
+                            row.get("Monthly Payment", "")
+                        ).strip()
 
                         start_date_str = row.get("Start Date", "").strip()
                         formatted_start_date = None
@@ -528,22 +547,36 @@ class BulkAdminLoanApplicationUploadView(generics.GenericAPIView):
                         data = {
                             "member": str(row.get("Member No", "")).strip(),
                             "product": str(row.get("Product Name", "")).strip(),
-                            "requested_amount": row.get("Requested Amount", "").strip() or None,
-                            "calculation_mode": row.get("Calculation Mode", "").strip() or None,
-                            "term_months": int(term_months_str) if term_months_str else None,
-                            "monthly_payment": monthly_payment_str if monthly_payment_str else None,
+                            "requested_amount": row.get("Requested Amount", "").strip()
+                            or None,
+                            "calculation_mode": row.get("Calculation Mode", "").strip()
+                            or None,
+                            "term_months": (
+                                int(term_months_str) if term_months_str else None
+                            ),
+                            "monthly_payment": (
+                                monthly_payment_str if monthly_payment_str else None
+                            ),
                             "repayment_frequency": "monthly",
                             "start_date": formatted_start_date,
                         }
-                        
-                        item_serializer = AdminLoanApplicationSerializer(data=data, context={'request': request})
+
+                        item_serializer = AdminLoanApplicationSerializer(
+                            data=data, context={"request": request}
+                        )
                         if item_serializer.is_valid():
                             item_serializer.save()
                             success_count += 1
                             results.append({"row": index, "status": "Success"})
                         else:
                             error_count += 1
-                            results.append({"row": index, "status": "Error", "errors": item_serializer.errors})
+                            results.append(
+                                {
+                                    "row": index,
+                                    "status": "Error",
+                                    "errors": item_serializer.errors,
+                                }
+                            )
                 except Exception as e:
                     error_count += 1
                     results.append({"row": index, "status": "Error", "error": str(e)})
@@ -564,13 +597,16 @@ class BulkAdminLoanApplicationUploadView(generics.GenericAPIView):
                     "detail": "Data processed successfully.",
                     "success_count": success_count,
                     "error_count": error_count,
-                    "results": results
+                    "results": results,
                 },
                 status=status.HTTP_201_CREATED,
             )
 
         except Exception as e:
-            return Response({"detail": f"Processing failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"detail": f"Processing failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class BulkAdminLoanApplicationCreateView(generics.GenericAPIView):
@@ -583,7 +619,10 @@ class BulkAdminLoanApplicationCreateView(generics.GenericAPIView):
     def post(self, request):
         applications_data = request.data.get("applications", [])
         if not isinstance(applications_data, list):
-            return Response({"detail": "Expected a list of applications."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Expected a list of applications."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         success_count = 0
         error_count = 0
@@ -592,14 +631,22 @@ class BulkAdminLoanApplicationCreateView(generics.GenericAPIView):
         for index, data in enumerate(applications_data):
             try:
                 with transaction.atomic():
-                    item_serializer = AdminLoanApplicationSerializer(data=data, context={'request': request})
+                    item_serializer = AdminLoanApplicationSerializer(
+                        data=data, context={"request": request}
+                    )
                     if item_serializer.is_valid():
                         item_serializer.save()
                         success_count += 1
                         results.append({"index": index, "status": "Success"})
                     else:
                         error_count += 1
-                        results.append({"index": index, "status": "Error", "errors": item_serializer.errors})
+                        results.append(
+                            {
+                                "index": index,
+                                "status": "Error",
+                                "errors": item_serializer.errors,
+                            }
+                        )
             except Exception as e:
                 error_count += 1
                 results.append({"index": index, "status": "Error", "error": str(e)})
@@ -609,7 +656,7 @@ class BulkAdminLoanApplicationCreateView(generics.GenericAPIView):
                 "detail": "Batch processed successfully.",
                 "success_count": success_count,
                 "error_count": error_count,
-                "results": results
+                "results": results,
             },
             status=status.HTTP_201_CREATED,
         )

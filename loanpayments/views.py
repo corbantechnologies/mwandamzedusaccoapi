@@ -5,7 +5,10 @@ from django.db import transaction
 
 from loanpayments.models import LoanPayment
 from loanpayments.serializers import LoanPaymentSerializer
-from loanpayments.utils import send_loan_payment_made_email, send_loan_payment_pending_update_email
+from loanpayments.utils import (
+    send_loan_payment_made_email,
+    send_loan_payment_pending_update_email,
+)
 from loanpayments.services import process_loan_repayment_accounting
 
 
@@ -37,9 +40,12 @@ class LoanPaymentDetailView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = "reference"
 
+
 """
 M-Pesa Integration
 """
+
+
 class LoanMpesaPaymentListCreateView(generics.ListCreateAPIView):
     """
     This view is used to create a new loan payment via M-Pesa.
@@ -47,6 +53,7 @@ class LoanMpesaPaymentListCreateView(generics.ListCreateAPIView):
     An email is sent to the user upon successful Mpesa payment notifying the user that the payment has been received and is pending approval.
     And that their loan account will be updated by end of business day.
     """
+
     queryset = LoanPayment.objects.all()
     serializer_class = LoanPaymentSerializer
     permission_classes = [IsAuthenticated]
@@ -64,4 +71,3 @@ class LoanMpesaPaymentListCreateView(generics.ListCreateAPIView):
         ):
             return self.queryset
         return self.queryset.filter(paid_by=self.request.user)
-
