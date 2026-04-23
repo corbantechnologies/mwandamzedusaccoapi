@@ -6,7 +6,6 @@ from django.utils import timezone
 from django.db import models, transaction
 from django.contrib.auth import get_user_model
 
-User = get_user_model()
 
 from loanapplications.models import LoanApplication
 from loanaccounts.models import LoanAccount
@@ -22,6 +21,12 @@ from guaranteerequests.models import GuaranteeRequest
 from guarantors.models import GuarantorProfile
 from loanapplications.utils import compute_loan_coverage
 from guaranteerequests.serializers import GuaranteeRequestSerializer
+from mwandamzedusaccoapi.settings import (
+    FIRST_LOAN_MAX_SAVINGS_PERCENT,
+    FIRST_LOAN_MIN_MEMBER_MONTHS,
+)
+
+User = get_user_model()
 
 
 class LoanApplicationSerializer(serializers.ModelSerializer):
@@ -163,6 +168,50 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         }
         if partial and not (set(data.keys()) & calc_fields):
             return data  # No recalc needed
+
+        # --- FIRST-TIME BORROWER VALIDATION ---
+        request = self.context.get("request")
+        is_admin = (
+            request.user.is_staff
+            or request.user.is_sacco_admin
+            or request.user.is_bookkeeper
+            or request.user.is_treasurer
+            if request
+            else False
+        )
+
+        # Only validate on initial creation for members
+        if not is_admin and not partial and not instance:
+            member = request.user if request else None
+            if member and member.is_member:
+                has_loans = LoanAccount.objects.filter(member=member).exists()
+                if not has_loans:
+                    # 1. Membership Duration Check
+                    membership_date = member.created_at.date()
+                    delta = relativedelta(date.today(), membership_date)
+                    duration_months = (
+                        delta.years * 12 + delta.months + delta.days / 30.0
+                    )
+
+                    if duration_months < FIRST_LOAN_MIN_MEMBER_MONTHS:
+                        raise serializers.ValidationError(
+                            f"You must be a member for at least {FIRST_LOAN_MIN_MEMBER_MONTHS} months to apply for your first loan."
+                        )
+
+                    # 2. Savings-Based Limit Check
+                    eligible_savings = SavingsAccount.objects.filter(
+                        member=member, account_type__can_guarantee=True
+                    ).aggregate(t=models.Sum("balance"))["t"] or Decimal("0")
+
+                    max_allowed = eligible_savings * (
+                        Decimal(str(FIRST_LOAN_MAX_SAVINGS_PERCENT)) / Decimal("100")
+                    )
+
+                    if principal > max_allowed:
+                        raise serializers.ValidationError(
+                            f"For your first loan, you can only borrow up to {FIRST_LOAN_MAX_SAVINGS_PERCENT}% of your guarantee-eligible savings. "
+                            f"Max allowed: {max_allowed:,.2f}"
+                        )
 
         # --- FULL VALIDATION ONLY IF NEEDED ---
         if mode is None:
@@ -397,10 +446,10 @@ class AdminLoanApplicationSerializer(LoanApplicationSerializer):
     def create(self, validated_data):
         proj = validated_data.pop("_projection")
         member = validated_data["member"]
-        
+
         # Save application
         instance = super(LoanApplicationSerializer, self).create(validated_data)
-        
+
         instance.projection_snapshot = proj
         instance.monthly_payment = validated_data["monthly_payment"]
         instance.term_months = validated_data["term_months"]
@@ -411,12 +460,17 @@ class AdminLoanApplicationSerializer(LoanApplicationSerializer):
         instance.admin_created = True
         instance.save(
             update_fields=[
-                "projection_snapshot", "monthly_payment", "term_months", 
-                "total_interest", "repayment_amount", "processing_fee", "status",
-                "admin_created"
+                "projection_snapshot",
+                "monthly_payment",
+                "term_months",
+                "total_interest",
+                "repayment_amount",
+                "processing_fee",
+                "status",
+                "admin_created",
             ]
         )
-        
+
         # Create Loan Account
         end_date = instance.start_date
         if instance.repayment_frequency == "monthly":
