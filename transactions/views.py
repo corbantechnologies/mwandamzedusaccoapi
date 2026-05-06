@@ -24,23 +24,14 @@ from django.utils import timezone
 from transactions.serializers import AccountSerializer, BulkUploadSerializer
 from savings.models import SavingsAccount
 from savingtypes.models import SavingType
-from ventureaccounts.models import VentureAccount
 from loanaccounts.models import LoanAccount
-from venturetypes.models import VentureType
+from feetypes.models import FeeType
 from loanproducts.models import LoanProduct
 from transactions.models import DownloadLog, BulkTransactionLog
 
 from savingsdeposits.models import SavingsDeposit
 from savingsdeposits.serializers import SavingsDepositSerializer
 from savingsdeposits.utils import send_deposit_made_email
-
-from venturedeposits.models import VentureDeposit
-from venturedeposits.serializers import VentureDepositSerializer
-from venturedeposits.utils import send_venture_deposit_made_email
-
-from venturepayments.models import VenturePayment
-from venturepayments.serializers import VenturePaymentSerializer
-from venturepayments.utils import send_venture_payment_confirmation_email
 
 from loanpayments.models import LoanPayment
 from loandisbursements.models import LoanDisbursement
@@ -53,6 +44,7 @@ from transactions.reports import (
 )
 
 from feeaccounts.models import FeeAccount
+from feepayments.models import FeePayment
 from feepayments.serializers import FeePaymentSerializer
 from feepayments.services import process_fee_payment_accounting
 from savingsdeposits.services import process_savings_deposit_accounting
@@ -76,7 +68,7 @@ class AccountListView(generics.ListAPIView):
             User.objects.all()
             .filter(is_member=True)
             .prefetch_related(
-                "venture_accounts",
+                "fee_accounts",
                 "savings",
                 "loan_accounts",
             )
@@ -95,7 +87,7 @@ class AccountDetailView(generics.RetrieveAPIView):
             User.objects.all()
             .filter(is_member=True)
             .prefetch_related(
-                "venture_accounts",
+                "fee_accounts",
                 "savings",
                 "loan_accounts",
             )
@@ -114,14 +106,14 @@ class AccountListDownloadView(generics.ListAPIView):
             .filter(is_member=True)
             .prefetch_related(
                 "savings",
-                "venture_accounts",
+                "fee_accounts",
             )
         )
 
     def get(self, request, *args, **kwargs):
         # load types
         saving_types = list(SavingType.objects.values_list("name", flat=True))
-        venture_types = list(VentureType.objects.values_list("name", flat=True))
+        fee_types = list(FeeType.objects.values_list("name", flat=True))
 
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
@@ -136,13 +128,12 @@ class AccountListDownloadView(generics.ListAPIView):
         for st in saving_types:
             headers += [f"{st} Account", f"{st} Current Balance", f"{st} Deposit"]
 
-        # Ventures: Account + Current Balance + Deposit + Payment
-        for vt in venture_types:
+        # Fees: Account + Outstanding Balance + Payment
+        for ft in fee_types:
             headers += [
-                f"{vt} Account",
-                f"{vt} Current Balance",
-                f"{vt} Deposit",
-                f"{vt} Payment",
+                f"{ft} Account",
+                f"{ft} Outstanding Balance",
+                f"{ft} Payment",
             ]
 
         # Optional: Payment Method
@@ -166,10 +157,10 @@ class AccountListDownloadView(generics.ListAPIView):
                     f"{st} Current Balance"
                 ] = ""
 
-            for vt in venture_types:
-                row[f"{vt} Account"] = row[f"{vt} Deposit"] = row[
-                    f"{vt} Current Balance"
-                ] = row[f"{vt} Payment"] = ""
+            for ft in fee_types:
+                row[f"{ft} Account"] = row[f"{ft} Outstanding Balance"] = row[
+                    f"{ft} Payment"
+                ] = ""
 
             # ===== Fill from existing data =====
             # Savings
@@ -178,10 +169,10 @@ class AccountListDownloadView(generics.ListAPIView):
                 row[f"{acc_type} Current Balance"] = balance
                 # Amount column stays empty for bulk upload/edit
 
-            # Ventures
-            for acc_no, acc_type, balance in user["venture_accounts"]:
-                row[f"{acc_type} Account"] = acc_no
-                row[f"{acc_type} Current Balance"] = balance
+            # Fees
+            for acc_no, fee_type, balance in user["fee_accounts"]:
+                row[f"{fee_type} Account"] = acc_no
+                row[f"{fee_type} Outstanding Balance"] = balance
                 # Amount column stays empty for bulk upload/edit
 
             # write row
@@ -212,7 +203,7 @@ class AccountListDownloadView(generics.ListAPIView):
 
 class CombinedBulkUploadView(generics.CreateAPIView):
     """
-    Bulk upload accounts: specifically savings, and venture accounts
+    Bulk upload accounts: specifically savings
     """
 
     permission_classes = [IsAuthenticated]
@@ -240,7 +231,6 @@ class CombinedBulkUploadView(generics.CreateAPIView):
         # Get types
         try:
             saving_types = SavingType.objects.all().values_list("name", flat=True)
-            venture_types = VentureType.objects.all().values_list("name", flat=True)
         except Exception as e:
             logger.error(f"Failed to fetch types: {str(e)}")
             return Response(
@@ -335,90 +325,6 @@ class CombinedBulkUploadView(generics.CreateAPIView):
                             {"row": index, "type": f"Savings {st}", "error": str(e)}
                         )
 
-            # --- VENTURE DEPOSITS ---
-            for vt in venture_types:
-                amount_key = f"{vt} Deposit"
-                account_key = f"{vt} Account"
-
-                if row.get(amount_key) and row.get(account_key):
-                    try:
-                        amount = Decimal(row[amount_key])
-                        if amount > 0:
-                            data = {
-                                "venture_account": row[account_key],
-                                "amount": amount,
-                            }
-                            serializer = VentureDepositSerializer(data=data)
-                            if serializer.is_valid():
-                                deposit = serializer.save(deposited_by=admin)
-                                success_count += 1
-                                # Email
-                                if deposit.venture_account.member.email:
-                                    send_venture_deposit_made_email(
-                                        deposit.venture_account.member, deposit
-                                    )
-                            else:
-                                error_count += 1
-                                errors.append(
-                                    {
-                                        "row": index,
-                                        "type": f"Venture Deposit {vt}",
-                                        "error": serializer.errors,
-                                    }
-                                )
-                    except Exception as e:
-                        error_count += 1
-                        errors.append(
-                            {
-                                "row": index,
-                                "type": f"Venture Deposit {vt}",
-                                "error": str(e),
-                            }
-                        )
-
-            # --- VENTURE PAYMENTS ---
-            for vt in venture_types:
-                payment_key = f"{vt} Payment"
-                account_key = f"{vt} Account"
-
-                if row.get(payment_key) and row.get(account_key):
-                    try:
-                        amount = Decimal(row[payment_key])
-                        if amount > 0:
-                            data = {
-                                "venture_account": row[account_key],
-                                "amount": amount,
-                                "payment_method": row.get("Payment Method", "Cash"),
-                                "payment_type": "Individual Settlement",
-                                "transaction_status": "Completed",
-                            }
-                            serializer = VenturePaymentSerializer(data=data)
-                            if serializer.is_valid():
-                                payment = serializer.save(paid_by=admin)
-                                success_count += 1
-                                # Email
-                                if payment.venture_account.member.email:
-                                    send_venture_payment_confirmation_email(
-                                        payment.venture_account.member, payment
-                                    )
-                            else:
-                                error_count += 1
-                                errors.append(
-                                    {
-                                        "row": index,
-                                        "type": f"Venture Payment {vt}",
-                                        "error": serializer.errors,
-                                    }
-                                )
-                    except Exception as e:
-                        error_count += 1
-                        errors.append(
-                            {
-                                "row": index,
-                                "type": f"Venture Payment {vt}",
-                                "error": str(e),
-                            }
-                        )
 
         # Update log
         try:
@@ -468,7 +374,7 @@ class MemberYearlySummaryView(APIView):
             "member_no": user.member_no,
             "member_name": user.get_full_name(),
             "savings": self.get_savings_summary(user, year),
-            "ventures": self.get_venture_summary(user, year),
+            "fees": self.get_fee_summary(user, year),
             "loans": self.get_loan_summary(user, year),
         }
         return Response(summary)
@@ -554,103 +460,72 @@ class MemberYearlySummaryView(APIView):
             )
         return summary
 
-    def get_venture_summary(self, user, year):
-        accounts = VentureAccount.objects.filter(member=user).select_related(
-            "venture_type"
-        )
+    def get_fee_summary(self, user, year):
+        accounts = FeeAccount.objects.filter(member=user).select_related("fee_type")
         summary = []
 
         for acc in accounts:
             monthly_data = []
+            target_amount = acc.fee_type.amount
 
             # Yearly Totals
-            total_yearly_deposits = VentureDeposit.objects.filter(
-                venture_account=acc, created_at__year=year
-            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-            total_yearly_payments = VenturePayment.objects.filter(
-                venture_account=acc,
-                payment_date__year=year,
+            total_yearly_paid = FeePayment.objects.filter(
+                fee_account=acc,
+                created_at__year=year,
                 transaction_status="Completed",
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-            bf_deposits = VentureDeposit.objects.filter(
-                venture_account=acc, created_at__year__lt=year
-            ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
-
-            bf_payments = VenturePayment.objects.filter(
-                venture_account=acc,
-                payment_date__year__lt=year,
+            # Total paid before this year
+            bf_paid = FeePayment.objects.filter(
+                fee_account=acc,
+                created_at__year__lt=year,
                 transaction_status="Completed",
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-            running_balance = bf_deposits - bf_payments
+            # Current outstanding at start of year
+            running_outstanding = target_amount - bf_paid
 
             for month in range(1, 13):
                 # Monthly Aggregates
-                month_deposits_qs = VentureDeposit.objects.filter(
-                    venture_account=acc,
+                month_payments_qs = FeePayment.objects.filter(
+                    fee_account=acc,
                     created_at__year=year,
                     created_at__month=month,
-                )
-                month_deposits_total = month_deposits_qs.aggregate(total=Sum("amount"))[
-                    "total"
-                ] or Decimal("0")
-
-                month_payments_qs = VenturePayment.objects.filter(
-                    venture_account=acc,
-                    payment_date__year=year,
-                    payment_date__month=month,
                     transaction_status="Completed",
                 )
+
                 month_payments_total = month_payments_qs.aggregate(total=Sum("amount"))[
                     "total"
                 ] or Decimal("0")
 
-                # Fetch Transactions & Combine
+                # Fetch Transactions
                 transactions = []
-                for dep in month_deposits_qs:
+                for payment in month_payments_qs.order_by("created_at"):
                     transactions.append(
                         {
-                            "date": dep.created_at.date(),
-                            "type": "Venture Deposit",
-                            "amount": dep.amount,
-                            "reference": dep.reference,
+                            "date": payment.created_at.date(),
+                            "type": "Fee Payment",
+                            "amount": payment.amount,
+                            "reference": payment.reference,
                             "method": (
-                                dep.payment_method.name if dep.payment_method else "N/A"
+                                payment.payment_method.name
+                                if payment.payment_method
+                                else "N/A"
                             ),
                         }
                     )
 
-                for pay in month_payments_qs:
-                    transactions.append(
-                        {
-                            "date": pay.payment_date,
-                            "type": "Venture Payment",  # This is a withdrawal/payment FROM the account
-                            "amount": pay.amount,
-                            "reference": pay.reference,
-                            "method": (
-                                pay.payment_method.name if pay.payment_method else "N/A"
-                            ),
-                        }
-                    )
-
-                # Sort by date
-                transactions.sort(key=lambda x: x["date"])
-
-                opening = running_balance
-                running_balance = (
-                    running_balance + month_deposits_total - month_payments_total
-                )
+                opening = running_outstanding
+                running_outstanding -= month_payments_total
+                closing = running_outstanding
 
                 monthly_data.append(
                     {
                         "month": calendar.month_name[month],
                         "month_num": month,
                         "opening_balance": opening,
-                        "deposits": month_deposits_total,
                         "payments": month_payments_total,
-                        "closing_balance": running_balance,
+                        "closing_balance": closing,
                         "transactions": transactions,
                     }
                 )
@@ -658,15 +533,19 @@ class MemberYearlySummaryView(APIView):
             summary.append(
                 {
                     "account_number": acc.account_number,
-                    "type": acc.venture_type.name,
+                    "fee_type": acc.fee_type.name,
+                    "currency": "KES",
                     "totals": {
-                        "total_deposits": total_yearly_deposits,
-                        "total_payments": total_yearly_payments,
+                        "target_amount": target_amount,
+                        "total_paid_yearly": total_yearly_paid,
+                        "total_paid_to_date": target_amount - running_outstanding,
+                        "balance_remaining": running_outstanding,
                     },
                     "monthly_summary": monthly_data,
                 }
             )
         return summary
+
 
     def get_loan_summary(self, user, year):
         accounts = LoanAccount.objects.filter(member=user).select_related("product")
@@ -806,7 +685,7 @@ class MemberYearlySummaryPDFView(MemberYearlySummaryView):
             "member_no": user.member_no,
             "member_name": user.get_full_name(),
             "savings": self.get_savings_summary(user, year),
-            "ventures": self.get_venture_summary(user, year),
+            "fees": self.get_fee_summary(user, year),
             "loans": self.get_loan_summary(user, year),
         }
 
@@ -840,15 +719,13 @@ class SaccoYearlySummaryView(APIView):
         # Initialize Yearly Totals
         yearly_totals = {
             "savings_deposits": Decimal("0"),
-            "venture_deposits": Decimal("0"),
-            "venture_payments": Decimal("0"),
+            "fee_payments": Decimal("0"),
             "loan_disbursements": Decimal("0"),
             "loan_repayments": Decimal("0"),
             "total_new_members": 0,
             "counts": {
                 "savings_deposits": 0,
-                "venture_deposits": 0,
-                "venture_payments": 0,
+                "fee_payments": 0,
                 "loan_disbursements": 0,
                 "loan_repayments": 0,
             },
@@ -861,16 +738,12 @@ class SaccoYearlySummaryView(APIView):
                 "new_members": 0,
                 "counts": {
                     "savings_deposits": 0,
-                    "venture_deposits": 0,
-                    "venture_payments": 0,
+                    "fee_payments": 0,
                     "loan_disbursements": 0,
                     "loan_repayments": 0,
                 },
                 "savings": {"total": Decimal("0"), "breakdown": {}},
-                "ventures": {
-                    "deposits": {"total": Decimal("0"), "breakdown": {}},
-                    "payments": {"total": Decimal("0"), "breakdown": {}},
-                },
+                "fees": {"total": Decimal("0"), "breakdown": {}},
                 "loans": {
                     "disbursed": {"total": Decimal("0"), "breakdown": {}},
                     "repaid": {"total": Decimal("0"), "breakdown": {}},
@@ -906,45 +779,26 @@ class SaccoYearlySummaryView(APIView):
                 yearly_totals["savings_deposits"] += amt
                 yearly_totals["counts"]["savings_deposits"] += count
 
-            # ---- VENTURE DEPOSITS ----
-            v_dep_qs = VentureDeposit.objects.filter(
-                created_at__year=year, created_at__month=month
-            )
-            v_dep_breakdown = v_dep_qs.values(
-                "venture_account__venture_type__name"
-            ).annotate(total=Sum("amount"), count=Count("id"))
-            for item in v_dep_breakdown:
-                amt = item["total"] or Decimal("0")
-                count = item["count"]
-                name = item["venture_account__venture_type__name"]
-
-                month_data["ventures"]["deposits"]["breakdown"][name] = amt
-                month_data["ventures"]["deposits"]["total"] += amt
-                month_data["counts"]["venture_deposits"] += count
-
-                yearly_totals["venture_deposits"] += amt
-                yearly_totals["counts"]["venture_deposits"] += count
-
-            # ---- VENTURE PAYMENTS ----
-            v_pay_qs = VenturePayment.objects.filter(
-                payment_date__year=year,
-                payment_date__month=month,
+            # ---- FEE PAYMENTS ----
+            fee_pay_qs = FeePayment.objects.filter(
+                created_at__year=year,
+                created_at__month=month,
                 transaction_status="Completed",
             )
-            v_pay_breakdown = v_pay_qs.values(
-                "venture_account__venture_type__name"
+            fee_pay_breakdown = fee_pay_qs.values(
+                "fee_account__fee_type__name"
             ).annotate(total=Sum("amount"), count=Count("id"))
-            for item in v_pay_breakdown:
+            for item in fee_pay_breakdown:
                 amt = item["total"] or Decimal("0")
                 count = item["count"]
-                name = item["venture_account__venture_type__name"]
+                name = item["fee_account__fee_type__name"]
 
-                month_data["ventures"]["payments"]["breakdown"][name] = amt
-                month_data["ventures"]["payments"]["total"] += amt
-                month_data["counts"]["venture_payments"] += count
+                month_data["fees"]["breakdown"][name] = amt
+                month_data["fees"]["total"] += amt
+                month_data["counts"]["fee_payments"] += count
 
-                yearly_totals["venture_payments"] += amt
-                yearly_totals["counts"]["venture_payments"] += count
+                yearly_totals["fee_payments"] += amt
+                yearly_totals["counts"]["fee_payments"] += count
 
             # ---- LOAN DISBURSEMENTS ----
             l_dis_qs = LoanDisbursement.objects.filter(

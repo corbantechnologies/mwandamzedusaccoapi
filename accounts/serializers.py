@@ -23,7 +23,6 @@ from accounts.utils import (
 from mwandamzedusaccoapi.settings import DOMAIN
 from savings.serializers import SavingSerializer
 from feeaccounts.serializers import FeeAccountSerializer
-from ventureaccounts.serializers import VentureAccountSerializer
 from loanaccounts.serializers import LoanAccountSerializer
 from loanapplications.serializers import LoanApplicationSerializer
 from guarantors.serializers import GuarantorProfileSerializer
@@ -50,7 +49,6 @@ class BaseUserSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(use_url=True, required=False)
     savings = SavingSerializer(many=True, read_only=True)
     fee_accounts = FeeAccountSerializer(many=True, read_only=True)
-    venture_accounts = VentureAccountSerializer(many=True, read_only=True)
     loan_accounts = LoanAccountSerializer(many=True, read_only=True)
     loan_applications = LoanApplicationSerializer(many=True, read_only=True)
     guarantor_profile = GuarantorProfileSerializer(read_only=True)
@@ -88,7 +86,6 @@ class BaseUserSerializer(serializers.ModelSerializer):
             "guarantor_profile",
             "savings",
             "fee_accounts",
-            "venture_accounts",
             "loan_accounts",
             "loan_applications",
         )

@@ -2,11 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
 from savings.models import SavingsAccount
-from ventureaccounts.models import VentureAccount
 from loanaccounts.models import LoanAccount
+from feeaccounts.models import FeeAccount
 from savingsdeposits.models import SavingsDeposit
-from venturedeposits.models import VentureDeposit
-from venturepayments.models import VenturePayment
 
 User = get_user_model()
 
@@ -14,7 +12,7 @@ User = get_user_model()
 class AccountSerializer(serializers.ModelSerializer):
     member_name = serializers.SerializerMethodField()
     savings_accounts = serializers.SerializerMethodField()
-    venture_accounts = serializers.SerializerMethodField()
+    fee_accounts = serializers.SerializerMethodField()
     loan_accounts = serializers.SerializerMethodField()
 
     class Meta:
@@ -23,7 +21,7 @@ class AccountSerializer(serializers.ModelSerializer):
             "member_no",
             "member_name",
             "savings_accounts",
-            "venture_accounts",
+            "fee_accounts",
             "loan_accounts",
         )
 
@@ -32,9 +30,9 @@ class AccountSerializer(serializers.ModelSerializer):
             "account_number", "account_type__name", "balance"
         )
 
-    def get_venture_accounts(self, obj):
-        return VentureAccount.objects.filter(member=obj).values_list(
-            "account_number", "venture_type__name", "balance"
+    def get_fee_accounts(self, obj):
+        return FeeAccount.objects.filter(member=obj).values_list(
+            "account_number", "fee_type__name", "outstanding_balance"
         )
 
     def get_loan_accounts(self, obj):

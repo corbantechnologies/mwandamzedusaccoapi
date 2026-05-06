@@ -222,25 +222,26 @@
         {% endfor %}
         {% endif %}
 
-        <!-- VENTURES SECTION -->
-        {% if ventures %}
-        <h3 class="section-title">Venture Accounts</h3>
-        {% for acc in ventures %}
+        <!-- FEES SECTION -->
+        {% if fees %}
+        <h3 class="section-title">Fee Accounts</h3>
+        {% for acc in fees %}
         <div style="margin-bottom: 20px;">
             <div class="summary-box">
-                <strong>Account:</strong> {{ acc.type }} ({{ acc.account_number }}) |
-                <strong>Deposits:</strong> {{ acc.totals.total_deposits|default:"0.00" }} |
-                <strong>Payments:</strong> {{ acc.totals.total_payments|default:"0.00" }}
+                <strong>Fee:</strong> {{ acc.fee_type }} ({{ acc.account_number }}) |
+                <strong>Target:</strong> {{ acc.totals.target_amount }} |
+                <strong>Paid (Year):</strong> {{ acc.totals.total_paid_yearly }} |
+                <strong>Total Paid:</strong> {{ acc.totals.total_paid_to_date }} |
+                <strong>Remaining:</strong> {{ acc.totals.balance_remaining }}
             </div>
             <table>
                 <thead>
                     <tr>
                         <th width="10%">Month</th>
-                        <th width="12%" class="text-right">Opening</th>
-                        <th width="12%" class="text-right">Deposits</th>
-                        <th width="12%" class="text-right">Payments</th>
-                        <th width="12%" class="text-right">Closing</th>
-                        <th width="42%">Transactions</th>
+                        <th width="15%" class="text-right">Opening Balance</th>
+                        <th width="15%" class="text-right">Payments</th>
+                        <th width="15%" class="text-right">Closing Balance</th>
+                        <th width="45%">Transactions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -248,14 +249,13 @@
                     <tr>
                         <td>{{ m.month|slice:":3" }}</td>
                         <td class="text-right">{{ m.opening_balance }}</td>
-                        <td class="text-right">{{ m.deposits }}</td>
                         <td class="text-right">{{ m.payments }}</td>
                         <td class="text-right bold">{{ m.closing_balance }}</td>
                         <td>
                             <div class="transaction-list">
                                 {% for t in m.transactions %}
                                 <div class="transaction-item">
-                                    <span>{{ t.date|date:"d M" }} - {{ t.type|slice:"8:" }} - {{ t.reference }}</span>
+                                    <span>{{ t.date|date:"d M" }} - {{ t.reference }}</span>
                                     <span class="bold">{{ t.amount }}</span>
                                 </div>
                                 {% empty %}
