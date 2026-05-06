@@ -141,9 +141,9 @@
                 <div class="card-subtext">{{ totals.counts.savings_deposits }} Transactions</div>
             </div>
             <div class="card">
-                <div class="card-title">Venture Deposits</div>
-                <div class="card-value">{{ totals.venture_deposits }}</div>
-                <div class="card-subtext">{{ totals.counts.venture_deposits }} Transactions</div>
+                <div class="card-title">Fee Payments</div>
+                <div class="card-value">{{ totals.fee_payments }}</div>
+                <div class="card-subtext">{{ totals.counts.fee_payments }} Transactions</div>
             </div>
             <div class="card">
                 <div class="card-title">Loans Disbursed</div>
@@ -164,7 +164,7 @@
                     <th rowspan="2" width="8%">Month</th>
                     <th rowspan="2" width="6%">New Members</th>
                     <th colspan="2">Savings</th>
-                    <th colspan="2">Ventures</th>
+                    <th colspan="2">Fees</th>
                     <th colspan="2">Loans</th>
                 </tr>
                 <tr>
@@ -172,9 +172,9 @@
                     <th>Deposits (Amt)</th>
                     <th>Count</th>
 
-                    <!-- Ventures -->
-                    <th>Deposits (Amt)</th>
+                    <!-- Fees -->
                     <th>Payments (Amt)</th>
+                    <th>Count</th>
 
                     <!-- Loans -->
                     <th>Disbursed (Amt)</th>
@@ -191,9 +191,9 @@
                     <td>{{ m.savings.total }}</td>
                     <td class="text-center">{{ m.counts.savings_deposits }}</td>
 
-                    <!-- Ventures -->
-                    <td>{{ m.ventures.deposits.total }}</td>
-                    <td>{{ m.ventures.payments.total }}</td>
+                    <!-- Fees -->
+                    <td>{{ m.fees.total }}</td>
+                    <td class="text-center">{{ m.counts.fee_payments }}</td>
 
                     <!-- Loans -->
                     <td>{{ m.loans.disbursed.total }}</td>
@@ -206,8 +206,8 @@
                     <td class="text-center">{{ totals.total_new_members }}</td>
                     <td>{{ totals.savings_deposits }}</td>
                     <td class="text-center">{{ totals.counts.savings_deposits }}</td>
-                    <td>{{ totals.venture_deposits }}</td>
-                    <td>{{ totals.venture_payments }}</td>
+                    <td>{{ totals.fee_payments }}</td>
+                    <td class="text-center">{{ totals.counts.fee_payments }}</td>
                     <td>{{ totals.loan_disbursements }}</td>
                     <td>{{ totals.loan_repayments }}</td>
                 </tr>

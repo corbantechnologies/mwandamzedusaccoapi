@@ -28,9 +28,7 @@ from accounts.tools import create_member_accounts
 from accounts.permissions import IsSystemAdminOrReadOnly
 from mwandamzedusaccoapi.settings import DOMAIN
 from savingtypes.models import SavingType
-from venturetypes.models import VentureType
 from savings.models import SavingsAccount
-from ventureaccounts.models import VentureAccount
 
 User = get_user_model()
 
@@ -103,7 +101,7 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
             .get_queryset()
             .filter(id=self.request.user.id)
             .prefetch_related(
-                "venture_accounts",
+                "fee_accounts",
                 "savings",
                 "loan_applications",
                 "loan_accounts",
@@ -177,13 +175,13 @@ class MemberListView(generics.ListAPIView):
         Users with is_sacco_admin are also members
         """
         return super().get_queryset().filter(is_member=True).prefetch_related(
-            "venture_accounts",
+            "fee_accounts",
             "savings",
             "loan_applications",
             "loan_accounts",
             "guarantor_profile",
         ) | super().get_queryset().filter(is_sacco_admin=True).prefetch_related(
-            "venture_accounts",
+            "fee_accounts",
             "savings",
             "loan_applications",
             "loan_accounts",

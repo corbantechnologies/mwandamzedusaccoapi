@@ -5,6 +5,7 @@ from financials.views import (
     BalanceSheetView,
     PnLStatementView,
     CashBalanceView,
+    DebtorsListView,
 )
 
 urlpatterns = [
@@ -12,4 +13,5 @@ urlpatterns = [
     path("balance-sheet/", BalanceSheetView.as_view(), name="balance-sheet"),
     path("pnl/", PnLStatementView.as_view(), name="pnl-statement"),
     path("cash-balance/", CashBalanceView.as_view(), name="cash-balance"),
+    path("debtors/", DebtorsListView.as_view(), name="debtors-list"),
 ]

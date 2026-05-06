@@ -11,6 +11,7 @@ from financials.reports import (
     get_pnl_statement,
     get_cash_balances,
 )
+from transactions.reports import get_debtors_report
 
 
 def _parse_date(date_str, param_name):
@@ -122,4 +123,16 @@ class CashBalanceView(APIView):
                 return Response({"error": err}, status=status.HTTP_400_BAD_REQUEST)
 
         data = get_cash_balances(as_of_date=as_of_date)
+        return Response(data)
+
+
+class DebtorsListView(APIView):
+    """
+    GET /api/v1/financials/debtors/
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        data = get_debtors_report()
         return Response(data)
