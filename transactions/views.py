@@ -33,14 +33,6 @@ from savingsdeposits.models import SavingsDeposit
 from savingsdeposits.serializers import SavingsDepositSerializer
 from savingsdeposits.utils import send_deposit_made_email
 
-from venturedeposits.models import VentureDeposit
-from venturedeposits.serializers import VentureDepositSerializer
-from venturedeposits.utils import send_venture_deposit_made_email
-
-from venturepayments.models import VenturePayment
-from venturepayments.serializers import VenturePaymentSerializer
-from venturepayments.utils import send_venture_payment_confirmation_email
-
 from loanpayments.models import LoanPayment
 from loandisbursements.models import LoanDisbursement
 from playwright.sync_api import sync_playwright
@@ -483,7 +475,6 @@ class MemberYearlySummaryView(APIView):
                 transaction_status="Completed",
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
-            # Balance logic (Debt based)
             # Total paid before this year
             bf_paid = FeePayment.objects.filter(
                 fee_account=acc,
@@ -491,6 +482,7 @@ class MemberYearlySummaryView(APIView):
                 transaction_status="Completed",
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
+            # Current outstanding at start of year
             running_outstanding = target_amount - bf_paid
 
             for month in range(1, 13):
@@ -501,6 +493,7 @@ class MemberYearlySummaryView(APIView):
                     created_at__month=month,
                     transaction_status="Completed",
                 )
+
                 month_payments_total = month_payments_qs.aggregate(total=Sum("amount"))[
                     "total"
                 ] or Decimal("0")
@@ -514,11 +507,17 @@ class MemberYearlySummaryView(APIView):
                             "type": "Fee Payment",
                             "amount": payment.amount,
                             "reference": payment.reference,
+                            "method": (
+                                payment.payment_method.name
+                                if payment.payment_method
+                                else "N/A"
+                            ),
                         }
                     )
 
                 opening = running_outstanding
                 running_outstanding -= month_payments_total
+                closing = running_outstanding
 
                 monthly_data.append(
                     {
@@ -526,7 +525,7 @@ class MemberYearlySummaryView(APIView):
                         "month_num": month,
                         "opening_balance": opening,
                         "payments": month_payments_total,
-                        "closing_balance": running_outstanding,
+                        "closing_balance": closing,
                         "transactions": transactions,
                     }
                 )
@@ -546,6 +545,7 @@ class MemberYearlySummaryView(APIView):
                 }
             )
         return summary
+
 
     def get_loan_summary(self, user, year):
         accounts = LoanAccount.objects.filter(member=user).select_related("product")
@@ -685,7 +685,7 @@ class MemberYearlySummaryPDFView(MemberYearlySummaryView):
             "member_no": user.member_no,
             "member_name": user.get_full_name(),
             "savings": self.get_savings_summary(user, year),
-            "ventures": self.get_venture_summary(user, year),
+            "fees": self.get_fee_summary(user, year),
             "loans": self.get_loan_summary(user, year),
         }
 
@@ -780,15 +780,15 @@ class SaccoYearlySummaryView(APIView):
                 yearly_totals["counts"]["savings_deposits"] += count
 
             # ---- FEE PAYMENTS ----
-            f_pay_qs = FeePayment.objects.filter(
+            fee_pay_qs = FeePayment.objects.filter(
                 created_at__year=year,
                 created_at__month=month,
                 transaction_status="Completed",
             )
-            f_pay_breakdown = f_pay_qs.values("fee_account__fee_type__name").annotate(
-                total=Sum("amount"), count=Count("id")
-            )
-            for item in f_pay_breakdown:
+            fee_pay_breakdown = fee_pay_qs.values(
+                "fee_account__fee_type__name"
+            ).annotate(total=Sum("amount"), count=Count("id"))
+            for item in fee_pay_breakdown:
                 amt = item["total"] or Decimal("0")
                 count = item["count"]
                 name = item["fee_account__fee_type__name"]

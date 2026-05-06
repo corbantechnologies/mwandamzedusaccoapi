@@ -2,11 +2,9 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
 from savings.models import SavingsAccount
-from feeaccounts.models import FeeAccount
 from loanaccounts.models import LoanAccount
+from feeaccounts.models import FeeAccount
 from savingsdeposits.models import SavingsDeposit
-from venturedeposits.models import VentureDeposit
-from venturepayments.models import VenturePayment
 
 User = get_user_model()
 
