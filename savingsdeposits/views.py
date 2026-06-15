@@ -29,6 +29,7 @@ from transactions.models import BulkTransactionLog
 from savingtypes.models import SavingType
 from mpesa.models import MpesaBody
 from savings.models import SavingsAccount
+from paymentaccounts.models import get_default_payment_method
 from mpesa.utils import get_access_token
 from savingsdeposits.services import process_savings_deposit_accounting
 
@@ -52,9 +53,10 @@ class AdminSavingsDepositCreateView(generics.CreateAPIView):
         process_savings_deposit_accounting(deposit)
 
         # Send email to the account owner if they have an email address
-        account_owner = deposit.savings_account.member
-        if account_owner.email:
-            send_deposit_made_email(account_owner, deposit)
+        if deposit.balance_updated and deposit.posted_to_gl:
+            account_owner = deposit.savings_account.member
+            if account_owner.email:
+                send_deposit_made_email(account_owner, deposit)
 
 
 class SavingsDepositView(generics.RetrieveAPIView):
@@ -111,6 +113,10 @@ class BulkSavingsDepositView(generics.CreateAPIView):
                         }
                     )
 
+                    if not raw_data.get("payment_method") or not str(raw_data.get("payment_method")).strip():
+                        pay_method = get_default_payment_method()
+                        raw_data["payment_method"] = pay_method.name if pay_method else None
+
                     if not raw_data.get("payment_method"):
                         raise ValidationError(
                             {
@@ -137,12 +143,13 @@ class BulkSavingsDepositView(generics.CreateAPIView):
                     f"Account: {deposit.savings_account.account_number} | Amount: {deposit.amount}"
                 )
 
-                account_owner = deposit.savings_account.member
-                if account_owner.email:
-                    try:
-                        send_deposit_made_email(account_owner, deposit)
-                    except Exception as e:
-                        logger.warning(f"Email failed for {deposit.reference}: {e}")
+                if deposit.balance_updated and deposit.posted_to_gl:
+                    account_owner = deposit.savings_account.member
+                    if account_owner.email:
+                        try:
+                            send_deposit_made_email(account_owner, deposit)
+                        except Exception as e:
+                            logger.warning(f"Email failed for {deposit.reference}: {e}")
 
             except Exception as e:
                 error_count += 1
@@ -233,6 +240,11 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
         except Exception as e:
             logger.warning(f"Cloudinary upload failed: {e}")
 
+        payment_method_name = request.data.get("payment_method")
+        if not payment_method_name or not str(payment_method_name).strip():
+            pay_method = get_default_payment_method()
+            payment_method_name = pay_method.name if pay_method else None
+
         success_count = 0
         error_count = 0
         errors = []
@@ -261,6 +273,9 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
                             }
                         )
 
+                        if not data.get("payment_method") or not str(data.get("payment_method")).strip():
+                            data["payment_method"] = payment_method_name
+
                         if not data.get("payment_method"):
                             raise ValidationError(
                                 {
@@ -283,13 +298,14 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
                         f"Account: {deposit.savings_account.account_number} | Amount: {deposit.amount}"
                     )
 
-                    if deposit.savings_account.member.email:
-                        try:
-                            send_deposit_made_email(
-                                deposit.savings_account.member, deposit
-                            )
-                        except Exception as e:
-                            logger.warning(f"Email failed: {deposit.reference}")
+                    if deposit.balance_updated and deposit.posted_to_gl:
+                        if deposit.savings_account.member.email:
+                            try:
+                                send_deposit_made_email(
+                                    deposit.savings_account.member, deposit
+                                )
+                            except Exception as e:
+                                logger.warning(f"Email failed: {deposit.reference}")
 
             except Exception as e:
                 error_count += 1
@@ -326,6 +342,9 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
         """Parse row and clean account numbers"""
         deposits = []
         payment_method = row.get("Payment Method")
+        if not payment_method or not payment_method.strip():
+            pay_method = get_default_payment_method()
+            payment_method = pay_method.name if pay_method else None
 
         # Single-row format
         if row.get("Amount"):
@@ -476,7 +495,7 @@ class SavingsDepositTemplateDownloadView(APIView):
 
         writer = csv.writer(response)
         writer.writerow(
-            ["Member Name", "Account Number", "Saving Type", "Amount", "Payment Method"]
+            ["Member Name", "Account Number", "Saving Type", "Amount"]
         )
 
         accounts = SavingsAccount.objects.filter(is_active=True).select_related(
@@ -489,7 +508,6 @@ class SavingsDepositTemplateDownloadView(APIView):
                     acc.account_number,
                     acc.account_type.name,
                     "",  # Empty Amount
-                    "",  # Empty Payment Method
                 ]
             )
 

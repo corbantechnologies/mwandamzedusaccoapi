@@ -42,3 +42,11 @@ class PaymentAccount(ReferenceModel, TimeStampedModel, UniversalIdModel):
 
     def __str__(self):
         return self.name
+
+
+def get_default_payment_method():
+    acc = PaymentAccount.objects.filter(is_active=True).first()
+    if not acc:
+        acc = PaymentAccount.objects.first()
+    return acc
+

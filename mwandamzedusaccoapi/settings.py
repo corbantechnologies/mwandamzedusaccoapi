@@ -73,6 +73,8 @@ INSTALLED_APPS = [
     "feepayments",
     # Transactions
     "transactions",
+    # Next of Kin
+    "nextofkin",
 ]
 
 MIDDLEWARE = [

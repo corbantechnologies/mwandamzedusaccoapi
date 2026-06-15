@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 
 from accounts.abstracts import ReferenceModel, TimeStampedModel, UniversalIdModel
-from paymentaccounts.models import PaymentAccount
+from paymentaccounts.models import PaymentAccount, get_default_payment_method
 from feeaccounts.models import FeeAccount
 from feepayments.utils import generate_fee_payment_code
 from mpesa.abstracts import MpesaPaymentModel
@@ -39,6 +39,7 @@ class FeePayment(TimeStampedModel, UniversalIdModel, ReferenceModel, MpesaPaymen
         PaymentAccount,
         on_delete=models.PROTECT,
         related_name="fee_payments",
+        default=get_default_payment_method,
     )
     code = models.CharField(
         max_length=100, unique=True, default=generate_fee_payment_code, editable=False

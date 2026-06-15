@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 
 from feepayments.models import FeePayment
 from feeaccounts.models import FeeAccount
-from paymentaccounts.models import PaymentAccount
+from paymentaccounts.models import PaymentAccount, get_default_payment_method
 
 User = get_user_model()
 
@@ -14,7 +14,10 @@ class FeePaymentSerializer(serializers.ModelSerializer):
         slug_field="account_number", queryset=FeeAccount.objects.all()
     )
     payment_method = serializers.SlugRelatedField(
-        slug_field="name", queryset=PaymentAccount.objects.all()
+        slug_field="name",
+        queryset=PaymentAccount.objects.all(),
+        required=False,
+        default=get_default_payment_method,
     )
 
     class Meta:
@@ -54,3 +57,4 @@ class BulkFeePaymentSerializer(serializers.Serializer):
 
 class BulkUploadFileSerializer(serializers.Serializer):
     file = serializers.FileField(help_text="CSV file for bulk upload", required=True)
+    payment_method = serializers.CharField(required=False, allow_blank=True, allow_null=True)

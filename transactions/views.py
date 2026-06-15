@@ -28,6 +28,7 @@ from loanaccounts.models import LoanAccount
 from feetypes.models import FeeType
 from loanproducts.models import LoanProduct
 from transactions.models import DownloadLog, BulkTransactionLog
+from paymentaccounts.models import get_default_payment_method
 
 from savingsdeposits.models import SavingsDeposit
 from savingsdeposits.serializers import SavingsDepositSerializer
@@ -124,20 +125,13 @@ class AccountListDownloadView(generics.ListAPIView):
         # ====== FULL ACCOUNT LIST + BULK UPLOAD COLUMNS ======
         headers = ["Member Name", "Member Number"]
 
-        # Savings: Account + Current Balance + Deposit
+        # Savings: Deposit only
         for st in saving_types:
-            headers += [f"{st} Account", f"{st} Current Balance", f"{st} Deposit"]
+            headers += [f"{st} Deposit"]
 
-        # Fees: Account + Outstanding Balance + Payment
+        # Fees: Payment only
         for ft in fee_types:
-            headers += [
-                f"{ft} Account",
-                f"{ft} Outstanding Balance",
-                f"{ft} Payment",
-            ]
-
-        # Optional: Payment Method
-        headers += ["Payment Method"]
+            headers += [f"{ft} Payment"]
 
         # write headers
         writer = csv.DictWriter(buffer, fieldnames=headers, lineterminator="\n")
@@ -148,32 +142,14 @@ class AccountListDownloadView(generics.ListAPIView):
             row = {
                 "Member Name": user["member_name"],
                 "Member Number": user["member_no"],
-                "Payment Method": "Cash",  # default
             }
 
             # initialize all to empty
             for st in saving_types:
-                row[f"{st} Account"] = row[f"{st} Deposit"] = row[
-                    f"{st} Current Balance"
-                ] = ""
+                row[f"{st} Deposit"] = ""
 
             for ft in fee_types:
-                row[f"{ft} Account"] = row[f"{ft} Outstanding Balance"] = row[
-                    f"{ft} Payment"
-                ] = ""
-
-            # ===== Fill from existing data =====
-            # Savings
-            for acc_no, acc_type, balance in user["savings_accounts"]:
-                row[f"{acc_type} Account"] = acc_no
-                row[f"{acc_type} Current Balance"] = balance
-                # Amount column stays empty for bulk upload/edit
-
-            # Fees
-            for acc_no, fee_type, balance in user["fee_accounts"]:
-                row[f"{fee_type} Account"] = acc_no
-                row[f"{fee_type} Outstanding Balance"] = balance
-                # Amount column stays empty for bulk upload/edit
+                row[f"{ft} Payment"] = ""
 
             # write row
             writer.writerow(row)
@@ -203,7 +179,7 @@ class AccountListDownloadView(generics.ListAPIView):
 
 class CombinedBulkUploadView(generics.CreateAPIView):
     """
-    Bulk upload accounts: specifically savings
+    Bulk upload accounts: Savings Deposits and Fee Payments
     """
 
     permission_classes = [IsAuthenticated]
@@ -230,7 +206,8 @@ class CombinedBulkUploadView(generics.CreateAPIView):
 
         # Get types
         try:
-            saving_types = SavingType.objects.all().values_list("name", flat=True)
+            saving_types = list(SavingType.objects.all().values_list("name", flat=True))
+            fee_types = list(FeeType.objects.all().values_list("name", flat=True))
         except Exception as e:
             logger.error(f"Failed to fetch types: {str(e)}")
             return Response(
@@ -283,33 +260,63 @@ class CombinedBulkUploadView(generics.CreateAPIView):
         # wrapping in atomic might be risky for large files if we want partial success
         # but safe for consistency. We'll catch per-row exceptions.
 
+        payment_method_name = request.data.get("payment_method")
+        if not payment_method_name or not str(payment_method_name).strip():
+            pay_method = get_default_payment_method()
+            payment_method_name = pay_method.name if pay_method else None
+
         for index, row in enumerate(reader, 1):
+            member_no = row.get("Member Number")
+            if not member_no:
+                continue
 
             # --- SAVINGS DEPOSITS ---
             for st in saving_types:
                 amount_key = f"{st} Deposit"
-                account_key = f"{st} Account"
 
-                if row.get(amount_key) and row.get(account_key):
+                if row.get(amount_key):
                     try:
                         amount = Decimal(row[amount_key])
                         if amount > 0:
+                            # Dynamically look up the savings account
+                            savings_acc = SavingsAccount.objects.filter(
+                                member__member_no=member_no,
+                                account_type__name=st
+                            ).first()
+
+                            if not savings_acc:
+                                error_count += 1
+                                errors.append(
+                                    {
+                                        "row": index,
+                                        "type": f"Savings {st}",
+                                        "error": f"Savings account of type '{st}' not found for member '{member_no}'",
+                                    }
+                                )
+                                continue
+
                             data = {
-                                "savings_account": row[account_key],
+                                "savings_account": savings_acc.account_number,
                                 "amount": amount,
-                                "payment_method": row.get("Payment Method", "Cash"),
+                                "payment_method": payment_method_name,
                                 "deposit_type": "Individual Deposit",
                                 "transaction_status": "Completed",
                             }
                             serializer = SavingsDepositSerializer(data=data)
                             if serializer.is_valid():
-                                deposit = serializer.save(deposited_by=admin)
+                                with transaction.atomic():
+                                    deposit = serializer.save(deposited_by=admin)
+                                    process_savings_deposit_accounting(deposit)
                                 success_count += 1
                                 # Email
-                                if deposit.savings_account.member.email:
-                                    send_deposit_made_email(
-                                        deposit.savings_account.member, deposit
-                                    )
+                                if deposit.balance_updated and deposit.posted_to_gl:
+                                    if deposit.savings_account.member.email:
+                                        try:
+                                            send_deposit_made_email(
+                                                deposit.savings_account.member, deposit
+                                            )
+                                        except Exception as e:
+                                            logger.warning(f"Email failed: {deposit.reference}")
                             else:
                                 error_count += 1
                                 errors.append(
@@ -323,6 +330,58 @@ class CombinedBulkUploadView(generics.CreateAPIView):
                         error_count += 1
                         errors.append(
                             {"row": index, "type": f"Savings {st}", "error": str(e)}
+                        )
+
+            # --- FEE PAYMENTS ---
+            for ft in fee_types:
+                amount_key = f"{ft} Payment"
+
+                if row.get(amount_key):
+                    try:
+                        amount = Decimal(row[amount_key])
+                        if amount > 0:
+                            # Dynamically look up the fee account
+                            fee_acc = FeeAccount.objects.filter(
+                                member__member_no=member_no,
+                                fee_type__name=ft
+                            ).first()
+
+                            if not fee_acc:
+                                error_count += 1
+                                errors.append(
+                                    {
+                                        "row": index,
+                                        "type": f"Fee {ft}",
+                                        "error": f"Fee account of type '{ft}' not found for member '{member_no}'",
+                                    }
+                                )
+                                continue
+
+                            data = {
+                                "fee_account": fee_acc.account_number,
+                                "amount": amount,
+                                "payment_method": payment_method_name,
+                                "transaction_status": "Completed",
+                            }
+                            serializer = FeePaymentSerializer(data=data)
+                            if serializer.is_valid():
+                                with transaction.atomic():
+                                    instance = serializer.save(paid_by=admin)
+                                    process_fee_payment_accounting(instance)
+                                success_count += 1
+                            else:
+                                error_count += 1
+                                errors.append(
+                                    {
+                                        "row": index,
+                                        "type": f"Fee {ft}",
+                                        "error": serializer.errors,
+                                    }
+                                )
+                    except Exception as e:
+                        error_count += 1
+                        errors.append(
+                            {"row": index, "type": f"Fee {ft}", "error": str(e)}
                         )
 
 
@@ -393,6 +452,7 @@ class MemberYearlySummaryView(APIView):
                 savings_account=acc,
                 created_at__year=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             # Balance Brought Forward
@@ -400,6 +460,7 @@ class MemberYearlySummaryView(APIView):
                 savings_account=acc,
                 created_at__year__lt=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             running_balance = bf_deposits
@@ -411,6 +472,7 @@ class MemberYearlySummaryView(APIView):
                     created_at__year=year,
                     created_at__month=month,
                     transaction_status="Completed",
+                    balance_updated=True,
                 )
 
                 month_deposits_total = month_deposits_qs.aggregate(total=Sum("amount"))[
@@ -473,6 +535,7 @@ class MemberYearlySummaryView(APIView):
                 fee_account=acc,
                 created_at__year=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             # Total paid before this year
@@ -480,6 +543,7 @@ class MemberYearlySummaryView(APIView):
                 fee_account=acc,
                 created_at__year__lt=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             # Current outstanding at start of year
@@ -492,6 +556,7 @@ class MemberYearlySummaryView(APIView):
                     created_at__year=year,
                     created_at__month=month,
                     transaction_status="Completed",
+                    balance_updated=True,
                 )
 
                 month_payments_total = month_payments_qs.aggregate(total=Sum("amount"))[
@@ -559,12 +624,14 @@ class MemberYearlySummaryView(APIView):
                 loan_account=acc,
                 created_at__year=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             total_yearly_repaid = LoanPayment.objects.filter(
                 loan_account=acc,
                 payment_date__year=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             # Loans Cash Flow Logic:
@@ -574,12 +641,14 @@ class MemberYearlySummaryView(APIView):
                 loan_account=acc,
                 created_at__year__lt=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             bf_paid = LoanPayment.objects.filter(
                 loan_account=acc,
                 payment_date__year__lt=year,
                 transaction_status="Completed",
+                balance_updated=True,
             ).aggregate(total=Sum("amount"))["total"] or Decimal("0")
 
             # B/F Debt = Disbursed - Paid
@@ -592,6 +661,7 @@ class MemberYearlySummaryView(APIView):
                     created_at__year=year,
                     created_at__month=month,
                     transaction_status="Completed",
+                    balance_updated=True,
                 )
                 month_disbursed_total = month_disbursed_qs.aggregate(
                     total=Sum("amount")
@@ -602,6 +672,7 @@ class MemberYearlySummaryView(APIView):
                     payment_date__year=year,
                     payment_date__month=month,
                     transaction_status="Completed",
+                    balance_updated=True,
                 )
                 month_paid_total = month_paid_qs.aggregate(total=Sum("amount"))[
                     "total"
@@ -1114,13 +1185,18 @@ class UniversalBulkTransactionUploadView(generics.CreateAPIView):
         error_count = 0
         errors = []
 
+        payment_method_name = request.data.get("payment_method")
+        if not payment_method_name or not str(payment_method_name).strip():
+            pay_method = get_default_payment_method()
+            payment_method_name = pay_method.name if pay_method else None
+
         with transaction.atomic():
             for index, row in enumerate(reader, 1):
                 try:
                     t_type = row.get("Transaction Type")
                     acc_num = row.get("Account Number")
                     amount_str = row.get("Amount")
-                    payment_method = row.get("Payment Method", "Cash")
+                    payment_method = payment_method_name
 
                     if not amount_str or Decimal(amount_str) <= 0:
                         continue
@@ -1136,10 +1212,11 @@ class UniversalBulkTransactionUploadView(generics.CreateAPIView):
                         if serializer.is_valid():
                             deposit = serializer.save(deposited_by=admin)
                             process_savings_deposit_accounting(deposit)
-                            if deposit.savings_account.member.email:
-                                send_deposit_made_email(
-                                    deposit.savings_account.member, deposit
-                                )
+                            if deposit.balance_updated and deposit.posted_to_gl:
+                                if deposit.savings_account.member.email:
+                                    send_deposit_made_email(
+                                        deposit.savings_account.member, deposit
+                                    )
                             success_count += 1
                         else:
                             error_count += 1

@@ -46,3 +46,4 @@ class AccountSerializer(serializers.ModelSerializer):
 
 class BulkUploadSerializer(serializers.Serializer):
     file = serializers.FileField()
+    payment_method = serializers.CharField(required=False, allow_blank=True, allow_null=True)

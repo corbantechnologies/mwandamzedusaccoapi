@@ -7,7 +7,7 @@ from datetime import date
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from savings.models import SavingsAccount
 from savingsdeposits.utils import generate_identity
-from paymentaccounts.models import PaymentAccount
+from paymentaccounts.models import PaymentAccount, get_default_payment_method
 
 User = get_user_model()
 
@@ -60,6 +60,7 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
         related_name="savings_deposits",
         null=True,
         blank=True,
+        default=get_default_payment_method,
     )
     deposit_type = models.CharField(
         max_length=100, choices=DEPOSIT_TYPE_CHOICES, default="Individual Deposit"

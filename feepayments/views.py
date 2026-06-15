@@ -8,6 +8,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.db import transaction
+from paymentaccounts.models import get_default_payment_method
 from django.http import HttpResponse
 
 from feepayments.models import FeePayment
@@ -67,7 +68,6 @@ class FeePaymentTemplateDownloadView(APIView):
                 "Fee Type",
                 "Fee Account Number",
                 "Amount",
-                "Payment Method",
             ]
         )
 
@@ -83,7 +83,6 @@ class FeePaymentTemplateDownloadView(APIView):
                     acc.fee_type.name,
                     acc.account_number,
                     "",  # Empty Amount
-                    "",  # Empty Payment Method
                 ]
             )
 
@@ -141,6 +140,11 @@ class BulkFeePaymentUploadView(generics.CreateAPIView):
         error_count = 0
         errors = []
 
+        payment_method_name = request.data.get("payment_method")
+        if not payment_method_name or not str(payment_method_name).strip():
+            pay_method = get_default_payment_method()
+            payment_method_name = pay_method.name if pay_method else None
+
         with transaction.atomic():
             for index, row in enumerate(reader, 1):
                 try:
@@ -153,7 +157,7 @@ class BulkFeePaymentUploadView(generics.CreateAPIView):
                     payment_data = {
                         "fee_account": acc_num,
                         "amount": amount_str,
-                        "payment_method": row.get("Payment Method"),
+                        "payment_method": payment_method_name,
                         "transaction_status": "Completed",
                     }
 

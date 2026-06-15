@@ -3,7 +3,7 @@ from rest_framework import serializers
 from savingsdeposits.models import SavingsDeposit
 from savings.models import SavingsAccount
 from decimal import Decimal
-from paymentaccounts.models import PaymentAccount
+from paymentaccounts.models import PaymentAccount, get_default_payment_method
 
 
 class SavingsDepositSerializer(serializers.ModelSerializer):
@@ -18,7 +18,10 @@ class SavingsDepositSerializer(serializers.ModelSerializer):
         max_digits=10, decimal_places=2, min_value=Decimal("0.01")
     )
     payment_method = serializers.SlugRelatedField(
-        slug_field="name", queryset=PaymentAccount.objects.all(), required=False
+        slug_field="name",
+        queryset=PaymentAccount.objects.all(),
+        required=False,
+        default=get_default_payment_method,
     )
 
     class Meta:
@@ -60,3 +63,4 @@ class BulkSavingsDepositSerializer(serializers.Serializer):
 
 class BulkUploadFileSerializer(serializers.Serializer):
     file = serializers.FileField(help_text="CSV file for bulk upload", required=True)
+    payment_method = serializers.CharField(required=False, allow_blank=True, allow_null=True)
