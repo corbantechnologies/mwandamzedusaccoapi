@@ -14,7 +14,6 @@ from loanproducts.models import LoanProduct
 from loanapplications.calculators import (
     reducing_fixed_payment,
     reducing_fixed_term,
-    flat_rate_fixed_payment,
     flat_rate_fixed_term,
 )
 from guaranteerequests.models import GuaranteeRequest
@@ -262,15 +261,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
                     )
                     data["monthly_payment"] = Decimal(str(proj["monthly_payment"]))
                 else:
-                    proj = flat_rate_fixed_payment(
-                        principal=principal,
-                        annual_rate=product.interest_rate,
-                        payment_per_month=payment,
-                        start_date=start_date,
-                        repayment_frequency=frequency,
-                        processing_fee_total=processing_fee,
+                    raise serializers.ValidationError(
+                        {"calculation_mode": "Flat-rate loans require a fixed term strategy. You cannot use fixed payment."}
                     )
-                    data["term_months"] = proj["term_months"]
             else:
                 if mode == "fixed_term":
                     proj = reducing_fixed_term(
