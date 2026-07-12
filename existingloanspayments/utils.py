@@ -35,7 +35,7 @@ def send_existing_loan_payment_made_email(user, existing_loan_payment):
             },
         )
         params = {
-            "from": "Mwanda Mzedu SACCO <finance@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <finance@mwandamzedusacco.com>",
             "to": [user.email],
             "subject": "You've made an existing loan payment!",
             "html": email_body,

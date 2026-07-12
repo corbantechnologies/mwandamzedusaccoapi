@@ -23,7 +23,7 @@ def send_deposit_made_email(user, deposit):
             {"user": user, "deposit": deposit, "current_year": current_year},
         )
         params = {
-            "from": "SACCO <finance@wananchimali.com>",
+            "from": "SACCO <finance@mwandamzedusacco.com>",
             "to": [user.email],
             "subject": "Deposit Confirmation",
             "html": email_body,

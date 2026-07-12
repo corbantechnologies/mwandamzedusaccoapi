@@ -25,7 +25,7 @@ def send_fee_payment_made_email(user, fee_payment):
             {"user": user, "fee_payment": fee_payment, "current_year": current_year},
         )
         params = {
-            "from": "SACCO <finance@wananchimali.com>",
+            "from": "SACCO <finance@mwandamzedusacco.com>",
             "to": [user.email],
             "subject": "Fee Payment Confirmation",
             "html": email_body,

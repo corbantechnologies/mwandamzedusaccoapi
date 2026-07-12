@@ -84,7 +84,7 @@ def notify_member_on_loan_submission(loan_application):
         email_body = render_to_string("loan_submitted.html", context)
 
         params = {
-            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <loans@mwandamzedusacco.com>",
             "to": [member.email],
             "subject": "Loan Application Submitted",
             "html": email_body,
@@ -114,7 +114,7 @@ def notify_member_on_loan_status_change(loan_application):
         email_body = render_to_string("loan_status_change.html", context)
 
         params = {
-            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <loans@mwandamzedusacco.com>",
             "to": [member.email],
             "subject": f"Loan Application {loan_application.status}",
             "html": email_body,
@@ -144,7 +144,7 @@ def send_loan_application_approved_email(loan_application, loan_account):
         email_body = render_to_string("loan_application_approved.html", context)
 
         params = {
-            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <loans@mwandamzedusacco.com>",
             "to": [member.email],
             "subject": "Loan Application Approved",
             "html": email_body,

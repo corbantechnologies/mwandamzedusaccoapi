@@ -29,7 +29,7 @@ def send_loan_payment_made_email(user, loan_payment):
             {"user": user, "loan_payment": loan_payment, "current_year": current_year},
         )
         params = {
-            "from": "Mwanda Mzedu SACCO <finance@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <finance@mwandamzedusacco.com>",
             "to": [user.email],
             "subject": "You've made a loan payment!",
             "html": email_body,
@@ -56,7 +56,7 @@ def send_loan_payment_pending_update_email(user, loan_payment):
             {"user": user, "loan_payment": loan_payment, "current_year": current_year},
         )
         params = {
-            "from": "Mwanda Mzedu SACCO <finance@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <finance@mwandamzedusacco.com>",
             "to": [user.email],
             "subject": "You've made a loan payment!",
             "html": email_body,

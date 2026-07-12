@@ -29,7 +29,7 @@ def notify_guarantor_on_request(guarantee_request, site_url=DOMAIN):
         email_body = render_to_string("new_guarantee_request.html", context)
 
         params = {
-            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <loans@mwandamzedusacco.com>",
             "to": [guarantor_user.email],
             "subject": f"New Guarantee Request from {member.first_name}",
             "html": email_body,
@@ -61,7 +61,7 @@ def notify_guarantor_on_status_change(guarantee_request):
         email_body = render_to_string("guarantee_request_status_change.html", context)
 
         params = {
-            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <loans@mwandamzedusacco.com>",
             "to": [guarantor_user.email],
             "subject": f"Guarantee Request {guarantee_request.status}",
             "html": email_body,
@@ -95,7 +95,7 @@ def notify_member_on_guarantee_response(guarantee_request):
         email_body = render_to_string("guarantee_response_for_member.html", context)
 
         params = {
-            "from": "Mwanda Mzedu SACCO <loans@wananchimali.com>",
+            "from": "Mwanda Mzedu SACCO <loans@mwandamzedusacco.com>",
             "to": [member.email],
             "subject": f"Guarantee Request {guarantee_request.status}",
             "html": email_body,
