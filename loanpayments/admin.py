@@ -13,12 +13,14 @@ class LoanPaymentAdmin(admin.ModelAdmin):
         "payment_method",
         "repayment_type",
         "transaction_status",
+        "transaction_date",
         "payment_date",
     )
     list_filter = (
         "payment_method",
         "repayment_type",
         "transaction_status",
+        "transaction_date",
         "payment_date",
     )
     search_fields = (

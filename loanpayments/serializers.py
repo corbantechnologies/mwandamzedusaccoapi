@@ -26,6 +26,7 @@ class LoanPaymentSerializer(serializers.ModelSerializer):
             "repayment_type",
             "amount",
             "transaction_status",
+            "transaction_date",
             "payment_code",
             "posted_to_gl",
             "balance_updated",

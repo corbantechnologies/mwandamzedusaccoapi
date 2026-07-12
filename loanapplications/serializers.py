@@ -173,8 +173,6 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
         is_admin = (
             request.user.is_staff
             or request.user.is_sacco_admin
-            or request.user.is_bookkeeper
-            or request.user.is_treasurer
             if request
             else False
         )

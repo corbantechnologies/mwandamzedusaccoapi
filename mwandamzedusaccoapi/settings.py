@@ -75,6 +75,8 @@ INSTALLED_APPS = [
     "transactions",
     # Next of Kin
     "nextofkin",
+    # Logs
+    "auditlogs",
 ]
 
 MIDDLEWARE = [

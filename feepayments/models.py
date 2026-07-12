@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 
 from accounts.abstracts import ReferenceModel, TimeStampedModel, UniversalIdModel
+from datetime import date
 from paymentaccounts.models import PaymentAccount, get_default_payment_method
 from feeaccounts.models import FeeAccount
 from feepayments.utils import generate_fee_payment_code
@@ -46,6 +47,12 @@ class FeePayment(TimeStampedModel, UniversalIdModel, ReferenceModel, MpesaPaymen
     )
     transaction_status = models.CharField(
         max_length=100, choices=TRANSACTION_STATUS_CHOICES, default="Pending"
+    )
+    transaction_date = models.DateField(
+        null=True,
+        blank=True,
+        default=date.today,
+        help_text="The actual date of the transaction",
     )
     posted_to_gl = models.BooleanField(default=False, editable=False)
     balance_updated = models.BooleanField(default=False, editable=False)

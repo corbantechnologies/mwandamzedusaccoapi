@@ -30,6 +30,7 @@ class FeePaymentSerializer(serializers.ModelSerializer):
             "fee_account",
             "payment_method",
             "transaction_status",
+            "transaction_date",
             "phone_number",
             "currency",
             "code",

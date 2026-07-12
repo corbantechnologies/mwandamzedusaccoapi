@@ -68,7 +68,7 @@ def process_savings_deposit_accounting(deposit):
                     description,
                     deposit.reference,
                     entries,
-                    posting_date=deposit.created_at.date(),
+                    posting_date=deposit.transaction_date,
                 )
                 deposit.posted_to_gl = True
 

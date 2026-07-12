@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
+from datetime import date
 
 from accounts.abstracts import TimeStampedModel, UniversalIdModel, ReferenceModel
 from loandisbursements.utils import generate_loan_disbursement_code
@@ -36,6 +37,12 @@ class LoanDisbursement(UniversalIdModel, TimeStampedModel, ReferenceModel):
     currency = models.CharField(max_length=3, default="KES")
     transaction_status = models.CharField(
         max_length=20, choices=TRANSACTION_STATUS_CHOICES, default="Pending"
+    )
+    transaction_date = models.DateField(
+        null=True,
+        blank=True,
+        default=date.today,
+        help_text="The actual date of the transaction",
     )
     disbursement_type = models.CharField(
         max_length=20, choices=DISBURSEMENT_TYPE_CHOICES, default="Principal"

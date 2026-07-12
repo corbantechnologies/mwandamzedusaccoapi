@@ -68,7 +68,7 @@ def process_fee_payment_accounting(payment):
                     description,
                     payment.reference,
                     entries,
-                    posting_date=payment.created_at.date(),
+                    posting_date=payment.transaction_date,
                 )
                 payment.posted_to_gl = True
 

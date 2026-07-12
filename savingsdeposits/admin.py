@@ -13,10 +13,17 @@ class SavingsDepositAdmin(admin.ModelAdmin):
         "amount",
         "payment_method",
         "deposit_type",
+        "transaction_date",
         "transaction_status",
         "created_at",
     )
-    list_filter = ("payment_method", "deposit_type", "transaction_status", "created_at")
+    list_filter = (
+        "payment_method",
+        "deposit_type",
+        "transaction_date",
+        "transaction_status",
+        "created_at",
+    )
     search_fields = (
         "savings_account__account_number",
         "deposited_by__member_no",

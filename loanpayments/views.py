@@ -64,9 +64,6 @@ class LoanMpesaPaymentListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         if (
             self.request.user.is_sacco_admin
-            or self.request.user.is_sacco_staff
-            or self.request.user.is_treasurer
-            or self.request.user.is_bookkeeper
             or self.request.user.is_superuser
         ):
             return self.queryset
