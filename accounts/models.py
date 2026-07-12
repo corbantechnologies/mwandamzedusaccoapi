@@ -82,9 +82,6 @@ class User(
     is_superuser = models.BooleanField(default=False)
     is_member = models.BooleanField(default=True)
     is_sacco_admin = models.BooleanField(default=False)
-    is_sacco_staff = models.BooleanField(default=False)
-    is_treasurer = models.BooleanField(default=False)
-    is_bookkeeper = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
     # Password Reset

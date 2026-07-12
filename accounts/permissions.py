@@ -9,9 +9,6 @@ class IsSystemAdminOrReadOnly(BasePermission):
             request.method in SAFE_METHODS
             or request.user.is_authenticated
             and request.user.is_sacco_admin
-            or request.user.is_sacco_staff
-            or request.user.is_treasurer
-            or request.user.is_bookkeeper
             or request.user.is_superuser
         )
 
@@ -20,8 +17,5 @@ class IsSystemAdminOrReadOnly(BasePermission):
             request.method in SAFE_METHODS
             or request.user.is_authenticated
             and request.user.is_sacco_admin
-            or request.user.is_sacco_staff
-            or request.user.is_treasurer
-            or request.user.is_bookkeeper
             or request.user.is_superuser
         )
