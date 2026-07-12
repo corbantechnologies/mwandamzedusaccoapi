@@ -20,9 +20,8 @@ def generate_reference():
 
 
 def generate_member_number():
-    year = datetime.now().year % 100
-    random_number = "".join(secrets.choice(string.digits) for _ in range(4))
-    return f"SCS{year}{random_number}"
+    random_number = "".join(secrets.choice(string.digits) for _ in range(3))
+    return f"MM{random_number}"
 
 
 def send_account_created_by_admin_email(user, activation_link=None):
