@@ -7,6 +7,9 @@ from savingsdeposits.views import (
     BulkSavingsDepositUploadView,
     AdminSavingsDepositCreateView,
     SavingsDepositTemplateDownloadView,
+    BulkSavingsDepositUpdateTemplateView,
+    BulkSavingsDepositUpdateUploadView,
+    BulkSavingsDepositUpdateJSONView,
 )
 
 app_name = "savingsdeposits"
@@ -22,4 +25,7 @@ urlpatterns = [
         name="bulk-template",
     ),
     path("admin/create/", AdminSavingsDepositCreateView.as_view(), name="admin-create"),
+    path("bulk/update/template/", BulkSavingsDepositUpdateTemplateView.as_view(), name="bulk-update-template"),
+    path("bulk/update/upload/", BulkSavingsDepositUpdateUploadView.as_view(), name="bulk-update-upload"),
+    path("bulk/update/json/", BulkSavingsDepositUpdateJSONView.as_view(), name="bulk-update-json"),
 ]

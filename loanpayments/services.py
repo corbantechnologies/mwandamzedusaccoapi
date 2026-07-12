@@ -297,7 +297,7 @@ def process_loan_repayment_accounting(payment):
                     f"{payment.repayment_type}: {loan_acc.account_number}",
                     payment.reference,
                     entries,
-                    posting_date=payment.payment_date.date(),
+                    posting_date=payment.transaction_date,
                 )
                 payment.posted_to_gl = True
 

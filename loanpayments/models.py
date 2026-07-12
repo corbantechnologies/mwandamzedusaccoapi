@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from datetime import date
 
 from accounts.abstracts import ReferenceModel, UniversalIdModel, TimeStampedModel
 from loanaccounts.models import LoanAccount
@@ -64,6 +65,12 @@ class LoanPayment(
         choices=TRANSACTION_STATUS_CHOICES,
         default="Pending",
         help_text="The main status of the transaction",
+    )
+    transaction_date = models.DateField(
+        null=True,
+        blank=True,
+        default=date.today,
+        help_text="The actual date of the transaction",
     )
     payment_date = models.DateTimeField(auto_now_add=True)
     payment_code = models.CharField(

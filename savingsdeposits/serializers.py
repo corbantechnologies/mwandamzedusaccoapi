@@ -36,6 +36,7 @@ class SavingsDepositSerializer(serializers.ModelSerializer):
             "payment_method",
             "deposit_type",
             "transaction_status",
+            "transaction_date",
             "is_active",
             "receipt_number",
             "identity",

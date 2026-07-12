@@ -69,7 +69,7 @@ def process_loan_disbursement_accounting(disbursement):
                     description,
                     disbursement.reference,
                     entries,
-                    posting_date=disbursement.created_at.date(),
+                    posting_date=disbursement.transaction_date,
                 )
                 disbursement.posted_to_gl = True
 

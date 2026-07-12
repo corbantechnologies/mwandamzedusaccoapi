@@ -71,6 +71,12 @@ class SavingsDeposit(TimeStampedModel, UniversalIdModel, ReferenceModel):
         default="Pending",
         help_text="The main status of the transaction",
     )
+    transaction_date = models.DateField(
+        null=True,
+        blank=True,
+        default=date.today,
+        help_text="The actual date of the transaction",
+    )
     is_active = models.BooleanField(default=True)
     receipt_number = models.CharField(max_length=50, blank=True, null=True)
     identity = models.CharField(

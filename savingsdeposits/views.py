@@ -59,7 +59,7 @@ class AdminSavingsDepositCreateView(generics.CreateAPIView):
                 send_deposit_made_email(account_owner, deposit)
 
 
-class SavingsDepositView(generics.RetrieveAPIView):
+class SavingsDepositView(generics.RetrieveUpdateAPIView):
     queryset = SavingsDeposit.objects.all()
     serializer_class = SavingsDepositSerializer
     permission_classes = [IsSystemAdminOrReadOnly]
@@ -423,7 +423,10 @@ class SavingsDepositListCreateView(generics.ListCreateAPIView):
         serializer.save(deposited_by=self.request.user)
 
     def get_queryset(self):
-        return SavingsDeposit.objects.filter(deposited_by=self.request.user)
+        user = self.request.user
+        if getattr(user, 'is_sacco_admin', False) or getattr(user, 'is_superuser', False) or getattr(user, 'is_staff', False):
+            return SavingsDeposit.objects.all().order_by('-created_at')
+        return SavingsDeposit.objects.filter(deposited_by=user).order_by('-created_at')
 
 
 """
@@ -512,3 +515,140 @@ class SavingsDepositTemplateDownloadView(APIView):
             )
 
         return response
+
+
+class BulkSavingsDepositUpdateTemplateView(APIView):
+    permission_classes = [IsSystemAdminOrReadOnly]
+
+    def get(self, request, *args, **kwargs):
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="bulk_deposit_update_template.csv"'
+
+        writer = csv.writer(response)
+        writer.writerow([
+            "Reference", "Member Number", "Member Name", 
+            "Deposit Type", "Amount", "Current Transaction Date", 
+            "New Transaction Date"
+        ])
+
+        deposit_type = request.query_params.get("deposit_type", None)
+        
+        queryset = SavingsDeposit.objects.filter(transaction_status="Completed")
+        if deposit_type:
+            queryset = queryset.filter(deposit_type=deposit_type)
+
+        queryset = queryset.select_related("savings_account__member")
+
+        for deposit in queryset:
+            member = deposit.savings_account.member
+            current_date = deposit.transaction_date.strftime("%Y-%m-%d") if deposit.transaction_date else ""
+            writer.writerow([
+                deposit.reference,
+                member.member_no,
+                member.get_full_name(),
+                deposit.deposit_type,
+                str(deposit.amount),
+                current_date,
+                ""  # Blank for New Transaction Date
+            ])
+
+        return response
+
+
+class BulkSavingsDepositUpdateUploadView(APIView):
+    permission_classes = [IsSystemAdminOrReadOnly]
+
+    def post(self, request, *args, **kwargs):
+        file = request.FILES.get("file")
+        if not file:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            csv_content = file.read().decode("utf-8")
+            reader = csv.DictReader(io.StringIO(csv_content))
+        except Exception as e:
+            return Response({"error": f"Invalid CSV: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        for index, row in enumerate(reader, 1):
+            reference = row.get("Reference")
+            new_date_str = row.get("New Transaction Date")
+
+            if not reference or not new_date_str:
+                if not new_date_str:
+                    continue
+                error_count += 1
+                errors.append({"row": index, "error": "Missing Reference or New Transaction Date"})
+                continue
+
+            try:
+                new_date = datetime.strptime(new_date_str.strip(), "%Y-%m-%d").date()
+                with transaction.atomic():
+                    deposit = SavingsDeposit.objects.get(reference=reference)
+                    deposit.transaction_date = new_date
+                    deposit.save(update_fields=["transaction_date"])
+                success_count += 1
+            except SavingsDeposit.DoesNotExist:
+                error_count += 1
+                errors.append({"row": index, "error": f"Deposit with reference {reference} not found"})
+            except ValueError:
+                error_count += 1
+                errors.append({"row": index, "error": f"Invalid date format: {new_date_str}. Expected YYYY-MM-DD"})
+            except Exception as e:
+                error_count += 1
+                errors.append({"row": index, "error": str(e)})
+
+        return Response({
+            "success_count": success_count,
+            "error_count": error_count,
+            "errors": errors[:30]
+        }, status=status.HTTP_200_OK if success_count > 0 else status.HTTP_400_BAD_REQUEST)
+
+
+class BulkSavingsDepositUpdateJSONView(APIView):
+    permission_classes = [IsSystemAdminOrReadOnly]
+
+    def patch(self, request, *args, **kwargs):
+        # Expecting: {"updates": [{"reference": "...", "transaction_date": "YYYY-MM-DD"}, ...]}
+        updates = request.data.get("updates", [])
+        if not updates:
+            return Response({"error": "No updates provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        success_count = 0
+        error_count = 0
+        errors = []
+
+        for item in updates:
+            reference = item.get("reference")
+            new_date_str = item.get("transaction_date")
+
+            if not reference or not new_date_str:
+                error_count += 1
+                errors.append({"reference": reference, "error": "Missing Reference or Transaction Date"})
+                continue
+
+            try:
+                new_date = datetime.strptime(new_date_str.strip(), "%Y-%m-%d").date()
+                with transaction.atomic():
+                    deposit = SavingsDeposit.objects.get(reference=reference)
+                    deposit.transaction_date = new_date
+                    deposit.save(update_fields=["transaction_date"])
+                success_count += 1
+            except SavingsDeposit.DoesNotExist:
+                error_count += 1
+                errors.append({"reference": reference, "error": "Deposit not found"})
+            except ValueError:
+                error_count += 1
+                errors.append({"reference": reference, "error": "Invalid date format"})
+            except Exception as e:
+                error_count += 1
+                errors.append({"reference": reference, "error": str(e)})
+
+        return Response({
+            "success_count": success_count,
+            "error_count": error_count,
+            "errors": errors[:30]
+        }, status=status.HTTP_200_OK if success_count > 0 else status.HTTP_400_BAD_REQUEST)
