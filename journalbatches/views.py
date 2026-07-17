@@ -61,6 +61,7 @@ class JournalBatchTemplateDownloadView(APIView):
             [
                 "Batch Identifier",
                 "Batch Description",
+                "Posting Date",
                 "GL Account Name",
                 "Debit",
                 "Credit",
@@ -69,10 +70,10 @@ class JournalBatchTemplateDownloadView(APIView):
 
         # Add an example row
         writer.writerow(
-            ["B001", "Opening Balance Adjustment", "CASH AT BANK", "1000.00", "0.00"]
+            ["B001", "Opening Balance Adjustment", "2026-07-17", "CASH AT BANK", "1000.00", "0.00"]
         )
         writer.writerow(
-            ["B001", "Opening Balance Adjustment", "MEMBER SAVINGS", "0.00", "1000.00"]
+            ["B001", "Opening Balance Adjustment", "2026-07-17", "MEMBER SAVINGS", "0.00", "1000.00"]
         )
 
         return response
@@ -138,6 +139,7 @@ class BulkJournalBatchUploadView(generics.CreateAPIView):
             if bid not in batches_data:
                 batches_data[bid] = {
                     "description": row.get("Batch Description", "Manual Bulk Entry"),
+                    "posting_date": row.get("Posting Date") or row.get("posting_date"),
                     "entries": [],
                 }
 
@@ -183,9 +185,17 @@ class BulkJournalBatchUploadView(generics.CreateAPIView):
 
                 # 2. Save Batch and Entries Atomically
                 with transaction.atomic():
-                    batch = JournalBatch.objects.create(
-                        description=bdata["description"], posted=True
-                    )
+                    create_kwargs = {
+                        "description": bdata["description"],
+                        "posted": True,
+                    }
+                    if bdata.get("posting_date"):
+                        try:
+                            datetime.strptime(bdata["posting_date"].strip(), "%Y-%m-%d")
+                            create_kwargs["posting_date"] = bdata["posting_date"].strip()
+                        except ValueError:
+                            pass
+                    batch = JournalBatch.objects.create(**create_kwargs)
 
                     for e in bdata["entries"]:
                         gl_acc = GLAccount.objects.get(name=e["account"])
@@ -281,11 +291,14 @@ class BulkJournalBatchCreateView(generics.CreateAPIView):
                         continue
 
                     with transaction.atomic():
-                        batch = JournalBatch.objects.create(
-                            description=v_data.get("description", "JSON Bulk Batch"),
-                            reference=v_data.get("reference"),
-                            posted=True,
-                        )
+                        create_kwargs = {
+                            "description": v_data.get("description", "JSON Bulk Batch"),
+                            "reference": v_data.get("reference"),
+                            "posted": True,
+                        }
+                        if v_data.get("posting_date"):
+                            create_kwargs["posting_date"] = v_data["posting_date"]
+                        batch = JournalBatch.objects.create(**create_kwargs)
                         for e in entries:
                             JournalEntry.objects.create(
                                 batch=batch,

@@ -16,6 +16,7 @@ class JournalBatchSerializer(serializers.ModelSerializer):
             "code",
             "description",
             "posted",
+            "posting_date",
             "created_at",
             "updated_at",
             "reference",
@@ -38,7 +39,7 @@ class BulkJournalBatchSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JournalBatch
-        fields = ["description", "entries", "reference"]
+        fields = ["description", "entries", "reference", "posting_date"]
 
 
 class BulkUploadFileSerializer(serializers.Serializer):

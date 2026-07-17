@@ -346,6 +346,15 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
             pay_method = get_default_payment_method()
             payment_method = pay_method.name if pay_method else None
 
+        raw_date = row.get("Transaction Date") or row.get("transaction_date")
+        transaction_date = None
+        if raw_date:
+            try:
+                datetime.strptime(raw_date.strip(), "%Y-%m-%d")
+                transaction_date = raw_date.strip()
+            except ValueError:
+                pass
+
         # Single-row format
         if row.get("Amount"):
             raw_account = row.get("Account Number") or row.get("savings_account")
@@ -354,15 +363,16 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
                 try:
                     amount = float(row["Amount"])
                     if amount >= 0.01:
-                        deposits.append(
-                            {
-                                "savings_account": clean_account,
-                                "amount": amount,
-                                "payment_method": payment_method,
-                                "deposit_type": "Individual Deposit",
-                                "currency": "KES",
-                            }
-                        )
+                        data = {
+                            "savings_account": clean_account,
+                            "amount": amount,
+                            "payment_method": payment_method,
+                            "deposit_type": "Individual Deposit",
+                            "currency": "KES",
+                        }
+                        if transaction_date:
+                            data["transaction_date"] = transaction_date
+                        deposits.append(data)
                 except (ValueError, TypeError):
                     pass
 
@@ -376,15 +386,16 @@ class BulkSavingsDepositUploadView(generics.CreateAPIView):
                         amount = float(row[amt_key])
                         if amount >= 0.01:
                             clean_account = self._clean_account_number(row[acc_key])
-                            deposits.append(
-                                {
-                                    "savings_account": clean_account,
-                                    "amount": amount,
-                                    "payment_method": payment_method,
-                                    "deposit_type": "Individual Deposit",
-                                    "currency": "KES",
-                                }
-                            )
+                            data = {
+                                "savings_account": clean_account,
+                                "amount": amount,
+                                "payment_method": payment_method,
+                                "deposit_type": "Individual Deposit",
+                                "currency": "KES",
+                            }
+                            if transaction_date:
+                                data["transaction_date"] = transaction_date
+                            deposits.append(data)
                     except (ValueError, TypeError):
                         continue
 
@@ -498,7 +509,7 @@ class SavingsDepositTemplateDownloadView(APIView):
 
         writer = csv.writer(response)
         writer.writerow(
-            ["Member Name", "Account Number", "Saving Type", "Amount"]
+            ["Member Name", "Account Number", "Saving Type", "Amount", "Transaction Date"]
         )
 
         accounts = SavingsAccount.objects.filter(is_active=True).select_related(
@@ -511,6 +522,7 @@ class SavingsDepositTemplateDownloadView(APIView):
                     acc.account_number,
                     acc.account_type.name,
                     "",  # Empty Amount
+                    "",  # Empty Transaction Date
                 ]
             )
 

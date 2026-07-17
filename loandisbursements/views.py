@@ -72,7 +72,7 @@ class LoanDisbursementTemplateDownloadView(APIView):
 
         writer = csv.writer(response)
         writer.writerow(
-            ["Member Name", "Loan Account Number", "Principal Amount", "Payment Method"]
+            ["Member Name", "Loan Account Number", "Principal Amount", "Payment Method", "Transaction Date"]
         )
 
         # Filter accounts linked to Approved (but not yet Disbursed) applications
@@ -87,6 +87,7 @@ class LoanDisbursementTemplateDownloadView(APIView):
                     acc.account_number,
                     acc.principal,
                     "",  # Payment Method
+                    "",  # Transaction Date
                 ]
             )
 
@@ -150,6 +151,7 @@ class BulkLoanDisbursementUploadView(generics.CreateAPIView):
                     acc_num = row.get("Loan Account Number")
                     amount_str = row.get("Principal Amount")
                     payment_method = row.get("Payment Method") or None
+                    raw_date = row.get("Transaction Date") or row.get("transaction_date")
 
                     if not acc_num or not amount_str:
                         continue
@@ -162,6 +164,12 @@ class BulkLoanDisbursementUploadView(generics.CreateAPIView):
                         "transaction_status": "Completed",
                         "disbursement_type": "Principal",
                     }
+                    if raw_date:
+                        try:
+                            datetime.strptime(raw_date.strip(), "%Y-%m-%d")
+                            disb_data["transaction_date"] = raw_date.strip()
+                        except ValueError:
+                            pass
 
                     serializer = LoanDisbursementSerializer(data=disb_data)
                     if serializer.is_valid():

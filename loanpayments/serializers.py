@@ -61,3 +61,11 @@ class LoanPaymentSerializer(serializers.ModelSerializer):
                     f"{loan_account.outstanding_balance}"
                 )
         return attrs
+
+
+class BulkLoanPaymentSerializer(serializers.Serializer):
+    payments = LoanPaymentSerializer(many=True)
+
+
+class BulkUploadFileSerializer(serializers.Serializer):
+    file = serializers.FileField(help_text="CSV file for bulk upload", required=True)
